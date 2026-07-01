@@ -213,7 +213,7 @@
       padding: 6px 8px;
     }
 
-    #transport-btn {
+    #transport-btn, #test-transport-btn {
       width: 70px;
       height: 70px;
       border-radius: 50%;
@@ -226,51 +226,223 @@
       align-items: center;
       justify-content: center;
     }
-    #transport-btn.running { border-color: var(--miss); color: var(--miss); }
+    #transport-btn.running, #test-transport-btn.running { border-color: var(--miss); color: var(--miss); }
 
     .hint { font-size: 0.7rem; color: var(--text-muted); }
 
-    #transport-state {
+    #transport-state, #test-transport-state {
       font-size: 0.85rem;
       color: var(--text-muted);
       min-height: 1.2em;
     }
 
-    /* ---- Groove grid ---- */
-    #grid-panel { max-width: 620px; }
-
-    .grid-row {
-      display: grid;
-      grid-template-columns: 90px repeat(8, 1fr);
-      align-items: center;
-      gap: 4px;
-      margin-bottom: 4px;
+    /* ---- Mode tabs ---- */
+    #mode-tabs {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 620px;
     }
-
-    .grid-row .row-label {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .cell {
-      height: 32px;
-      border-radius: 4px;
+    .tab-btn {
+      flex: 1;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       background: var(--surface);
       border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      padding: 10px 14px;
+      cursor: pointer;
     }
-    .cell.expected { background: #444; }
-    .cell.playhead { outline: 2px solid var(--accent); outline-offset: -2px; }
-    .cell.on-target { background: var(--good); }
-    .cell.early     { background: var(--early); }
-    .cell.late      { background: var(--late); }
-    .cell.miss      { background: var(--miss); }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(240, 165, 0, 0.08);
+    }
 
-    /* ---- Summary ---- */
+    .mode-panel { display: none; width: 100%; align-items: center; flex-direction: column; gap: 24px; }
+    .mode-panel.active { display: flex; }
+
+    /* ---- Legend (always visible, shared by both modes) ---- */
+    #legend-panel { max-width: 620px; font-size: 0.8rem; }
+    #legend-panel .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .legend-swatch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-dot.green { background: var(--good); }
+    .legend-dot.amber { background: var(--late); }
+    .legend-dot.red   { background: var(--miss); }
+    #legend-panel .legend-note {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    /* ---- Live timing meter (shared by Test area + Groove view) ---- */
+    .meter-panel { max-width: 620px; }
+    .meter-lane {
+      position: relative;
+      height: 64px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .meter-zone-on {
+      /* +-30ms (ON_TARGET_MS) zone out of the meter's +-120ms (METER_RANGE_MS)
+         range, see renderMeterHit in the script below: 30/120 = 25% of the
+         full lane width, centred. Keep this in sync with METER_RANGE_MS if
+         that constant ever changes. */
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 37.5%;
+      width: 25%;
+      background: rgba(76, 175, 130, 0.14);
+      border-left: 1px dashed rgba(76, 175, 130, 0.4);
+      border-right: 1px dashed rgba(76, 175, 130, 0.4);
+    }
+    .meter-centerline {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: var(--text-muted);
+    }
+    .meter-side-label {
+      position: absolute;
+      top: 4px;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .meter-side-label.early { left: 8px; }
+    .meter-side-label.late  { right: 8px; }
+    .meter-side-label.on    { left: 50%; transform: translateX(-50%); }
+
+    .meter-marker {
+      position: absolute;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--text-muted);
+      opacity: 0.45;
+    }
+    .meter-marker.green { background: var(--good); }
+    .meter-marker.amber { background: var(--late); }
+    .meter-marker.red   { background: var(--miss); }
+    .meter-marker.latest {
+      width: 16px;
+      height: 16px;
+      opacity: 1;
+      box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px currentColor;
+      z-index: 2;
+    }
+
+    .meter-readout {
+      margin-top: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 1.1rem;
+      text-align: center;
+      min-height: 1.4em;
+    }
+    .meter-readout .dir-early { color: var(--early); }
+    .meter-readout .dir-late  { color: var(--late); }
+
+    /* ---- Notation (VexFlow) ---- */
+    #notation-panel { max-width: 620px; }
+    #notation-output { width: 100%; overflow-x: auto; }
+    #notation-output svg { display: block; margin: 0 auto; }
+
+    /* ---- Test area controls ---- */
+    #testarea-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      max-width: 620px;
+    }
+    .subdivision-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .subdivision-btn {
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    .subdivision-btn:hover { background: var(--border); }
+
+    /* Test-area BPM + subdivision controls are disabled while testEngine is
+       running (see setTestControlsDisabled) – changing tempo/subdivision
+       mid-run would re-extrapolate the click grid out from under hits
+       already measured against the original grid. */
+    #testarea-controls .adj:disabled,
+    #test-bpm-input:disabled,
+    .subdivision-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .subdivision-btn:disabled:hover { background: var(--surface); }
+    .subdivision-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(240, 165, 0, 0.12);
+    }
+
+    /* ---- Running stats (Test area) ---- */
+    #teststats-panel { max-width: 620px; font-size: 0.9rem; }
+    #teststats-panel .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
+    #teststats-panel .label { color: var(--text-muted); }
+    #reset-stats-btn {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    #reset-stats-btn:hover { background: var(--border); color: var(--text); }
+
+    /* ---- Summary (Groove scoring) ---- */
     #summary-panel { max-width: 620px; font-size: 0.9rem; }
     #summary-panel .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
     #summary-panel .label { color: var(--text-muted); }
 
   </style>
+  <!-- VexFlow 5.0.0, pinned via jsDelivr CDN. UMD build exposes a single
+       global `VexFlow` (flat namespace: VexFlow.Renderer, VexFlow.Stave,
+       etc — NOT the old Vex.Flow.* namespace from pre-4.x releases). -->
+  <script src="https://cdn.jsdelivr.net/npm/vexflow@5.0.0/build/cjs/vexflow.min.js"></script>
 </head>
 <body>
 
@@ -295,32 +467,112 @@
     <button id="reset-map-btn">Reset to GM default</button>
   </section>
 
-  <!-- Transport -->
-  <section id="transport-controls">
-    <div class="bpm-row">
-      <button class="adj" id="bpm-down5">−5</button>
-      <button class="adj" id="bpm-down1">−1</button>
-      <div class="bpm-display" id="bpm-display">100</div>
-      <button class="adj" id="bpm-up1">+1</button>
-      <button class="adj" id="bpm-up5">+5</button>
+  <!-- Legend: always visible in both modes, per SPEC.md section B/C -->
+  <section class="panel" id="legend-panel">
+    <h2>Legend</h2>
+    <div class="legend-row">
+      <span class="legend-swatch"><span class="legend-dot green"></span>On-target (within 30ms)</span>
+      <span class="legend-swatch"><span class="legend-dot amber"></span>Close (30–80ms)</span>
+      <span class="legend-swatch"><span class="legend-dot red"></span>Off / miss (over 80ms)</span>
     </div>
-    <input type="number" id="bpm-input" min="30" max="300" value="100" />
-    <button id="transport-btn" aria-label="Start">&#x25B6;</button>
-    <span class="hint">or press Space</span>
-    <div id="transport-state"></div>
+    <div class="legend-note">Colour = how close. Position (left/right of centre) = early/late.</div>
   </section>
 
-  <!-- Groove grid -->
-  <section class="panel" id="grid-panel">
-    <h2>Groove</h2>
-    <div id="grid-rows"></div>
-  </section>
+  <!-- Mode tabs -->
+  <div id="mode-tabs">
+    <button class="tab-btn active" id="tab-groove" data-mode="groove">Groove</button>
+    <button class="tab-btn" id="tab-test" data-mode="test">Test</button>
+  </div>
 
-  <!-- Summary -->
-  <section class="panel" id="summary-panel">
-    <h2>Scoring</h2>
-    <div id="summary-content"></div>
-  </section>
+  <!-- ============================ GROOVE MODE ============================ -->
+  <div class="mode-panel active" id="mode-panel-groove">
+
+    <!-- Transport -->
+    <section id="transport-controls">
+      <div class="bpm-row">
+        <button class="adj" id="bpm-down5">−5</button>
+        <button class="adj" id="bpm-down1">−1</button>
+        <div class="bpm-display" id="bpm-display">100</div>
+        <button class="adj" id="bpm-up1">+1</button>
+        <button class="adj" id="bpm-up5">+5</button>
+      </div>
+      <input type="number" id="bpm-input" min="30" max="300" value="100" />
+      <button id="transport-btn" aria-label="Start">&#x25B6;</button>
+      <span class="hint">or press Space</span>
+      <div id="transport-state"></div>
+    </section>
+
+    <!-- Groove notation (VexFlow) -->
+    <section class="panel" id="notation-panel">
+      <h2>Groove</h2>
+      <div id="notation-output"></div>
+    </section>
+
+    <!-- Live timing meter -->
+    <section class="panel meter-panel" id="meter-panel-groove">
+      <h2>Live Timing</h2>
+      <div class="meter-lane" id="meter-lane-groove">
+        <div class="meter-zone-on"></div>
+        <div class="meter-centerline"></div>
+        <span class="meter-side-label early">Early</span>
+        <span class="meter-side-label on">On</span>
+        <span class="meter-side-label late">Late</span>
+      </div>
+      <div class="meter-readout" id="meter-readout-groove">–</div>
+    </section>
+
+    <!-- Summary -->
+    <section class="panel" id="summary-panel">
+      <h2>Scoring</h2>
+      <div id="summary-content"></div>
+    </section>
+
+  </div>
+
+  <!-- ============================= TEST MODE ============================= -->
+  <div class="mode-panel" id="mode-panel-test">
+
+    <!-- Test-area transport + subdivision -->
+    <section id="testarea-controls">
+      <div class="bpm-row">
+        <button class="adj" id="test-bpm-down5">−5</button>
+        <button class="adj" id="test-bpm-down1">−1</button>
+        <div class="bpm-display" id="test-bpm-display">100</div>
+        <button class="adj" id="test-bpm-up1">+1</button>
+        <button class="adj" id="test-bpm-up5">+5</button>
+      </div>
+      <input type="number" id="test-bpm-input" min="30" max="300" value="100" />
+      <div class="subdivision-row" id="subdivision-row">
+        <button class="subdivision-btn" data-subdivision="quarter">1/4</button>
+        <button class="subdivision-btn active" data-subdivision="eighth">1/8</button>
+        <button class="subdivision-btn" data-subdivision="sixteenth">1/16</button>
+      </div>
+      <button id="test-transport-btn" aria-label="Start">&#x25B6;</button>
+      <span class="hint">or press Space</span>
+      <div id="test-transport-state"></div>
+    </section>
+
+    <!-- Live timing meter -->
+    <section class="panel meter-panel" id="meter-panel-test">
+      <h2>Live Timing</h2>
+      <div class="meter-lane" id="meter-lane-test">
+        <div class="meter-zone-on"></div>
+        <div class="meter-centerline"></div>
+        <span class="meter-side-label early">Early</span>
+        <span class="meter-side-label on">On</span>
+        <span class="meter-side-label late">Late</span>
+      </div>
+      <div class="meter-readout" id="meter-readout-test">–</div>
+    </section>
+
+    <!-- Running stats -->
+    <section class="panel" id="teststats-panel">
+      <h2>Stats</h2>
+      <div id="teststats-content"></div>
+      <button id="reset-stats-btn">Reset stats</button>
+    </section>
+
+  </div>
 
 <script type="module">
 "use strict";
@@ -338,6 +590,15 @@ import {
   summarize,
   WINDOW_MS,
 } from "./scoring.js";
+
+import {
+  SUBDIVISIONS,
+  nearestGridLine,
+  msToBand,
+  createRunningStats,
+  addHitToStats,
+  summarizeStats,
+} from "./testarea.js";
 
 // =============================================================================
 // PracticeEngine
@@ -481,6 +742,120 @@ window.PracticeEngine = PracticeEngine;
 window.GROOVE = GROOVE;
 
 // =============================================================================
+// TestEngine
+//
+// Same drift-free scheduling pattern as PracticeEngine (anchor time +
+// monotonic step index, no beat-to-beat accumulation), but generic over the
+// Test area's selectable subdivision (SPEC.md section D) instead of a fixed
+// 8th-note groove. There is no prescribed pattern to score against here –
+// every grid step just plays a click; nearestGridLine() (testarea.js) is
+// used by the caller to measure incoming hits against this engine's grid,
+// using the SAME anchorTime/bpm/subdivision this engine schedules from.
+//
+// A fixed 1-bar count-in (clicks only) precedes the free-play grid, matching
+// PracticeEngine's count-in convention.
+// =============================================================================
+
+class TestEngine {
+  static BPM_MIN = 30;
+  static BPM_MAX = 300;
+
+  #ctx;
+  #lookahead;
+  #tickInterval;
+  #onStep; // fn(stepInBeat, scheduledTime, isAccent, isCountIn)
+
+  #running = false;
+  #tickerId = null;
+  #startTime = 0;   // AudioContext time of grid step 0 (anchor for nearestGridLine)
+  #nextStep = 0;
+
+  #bpm = 100;
+  #stepsPerBeat = 2; // eighth-note default, matches the Groove mode's default feel
+
+  constructor({ audioContext, lookahead = 0.1, tickInterval = 25, onStep } = {}) {
+    if (!audioContext) throw new Error("TestEngine: audioContext is required");
+    this.#ctx = audioContext;
+    this.#lookahead = lookahead;
+    this.#tickInterval = tickInterval;
+    this.#onStep = typeof onStep === "function" ? onStep : () => {};
+  }
+
+  get isRunning() { return this.#running; }
+  get bpm() { return this.#bpm; }
+  get stepsPerBeat() { return this.#stepsPerBeat; }
+  // anchorTime: the audio-clock time of grid step 0, i.e. the first
+  // non-count-in step. Used by callers as nearestGridLine()'s anchorTime.
+  // Count-in is STEPS_PER_BAR_COUNTIN BEATS, which at the current
+  // subdivision is STEPS_PER_BAR_COUNTIN * stepsPerBeat actual grid steps -
+  // must match #tick()'s own countInSteps calculation below, or anchorTime
+  // drifts away from the real grid step 0 for any subdivision other than
+  // quarter notes (stepsPerBeat=1).
+  get anchorTime() {
+    return this.#startTime + STEPS_PER_BAR_COUNTIN * this.#stepsPerBeat * this.#secondsPerStep();
+  }
+
+  setBpm(raw) {
+    const v = clamp(Math.round(Number(raw)), TestEngine.BPM_MIN, TestEngine.BPM_MAX);
+    this.#bpm = v;
+    return v;
+  }
+
+  setStepsPerBeat(n) {
+    this.#stepsPerBeat = n;
+    return this.#stepsPerBeat;
+  }
+
+  start() {
+    if (this.#running) return;
+    this.#running = true;
+    this.#nextStep = 0;
+    this.#startTime = this.#ctx.currentTime + 0.05;
+    this.#tick();
+    this.#tickerId = setInterval(() => this.#tick(), this.#tickInterval);
+  }
+
+  stop() {
+    if (!this.#running) return;
+    this.#running = false;
+    clearInterval(this.#tickerId);
+    this.#tickerId = null;
+  }
+
+  #secondsPerStep() {
+    return (60 / this.#bpm) / this.#stepsPerBeat;
+  }
+
+  #tick() {
+    if (!this.#running) return;
+    const horizon = this.#ctx.currentTime + this.#lookahead;
+    const secondsPerStep = this.#secondsPerStep();
+    const countInSteps = STEPS_PER_BAR_COUNTIN * this.#stepsPerBeat;
+
+    while (true) {
+      const scheduledTime = this.#startTime + this.#nextStep * secondsPerStep;
+      if (scheduledTime > horizon) break;
+
+      const isCountIn = this.#nextStep < countInSteps;
+      const stepInBeat = this.#nextStep % this.#stepsPerBeat;
+      const isAccent = isCountIn
+        ? this.#nextStep % this.#stepsPerBeat === 0 && Math.floor(this.#nextStep / this.#stepsPerBeat) % BEATS_PER_BAR === 0
+        : stepInBeat === 0 && Math.floor((this.#nextStep - countInSteps) / this.#stepsPerBeat) % BEATS_PER_BAR === 0;
+
+      this.#onStep(stepInBeat, scheduledTime, isAccent, isCountIn);
+
+      this.#nextStep++;
+    }
+  }
+}
+
+// One bar's worth of beats used for the Test area's count-in, matching
+// PracticeEngine's 1-bar count-in convention.
+const STEPS_PER_BAR_COUNTIN = BEATS_PER_BAR;
+
+window.TestEngine = TestEngine;
+
+// =============================================================================
 // Click synthesis – same approach as the metronome: oscillator + short
 // exponential-decay gain envelope, no external assets. Accent = higher pitch.
 // =============================================================================
@@ -573,7 +948,17 @@ let scoredBarIndexes = new Set(); // bar indexes already scored (avoid re-scorin
 // above ~187.5) can only ever be matched by ONE bar, not double-counted.
 let consumedActualIndices = new Set();
 let runningTally = { "on-target": 0, early: 0, late: 0, miss: 0, extra: 0 };
-let cellState = {}; // "barStep-voice" -> classification, for current bar's grid colouring
+
+// ---- Test area state ----
+// Only one of `engine` (Groove mode) / `testEngine` (Test mode) runs at a
+// time – switching tabs while a transport is running stops it first (see
+// switchMode()), so handleMidiMessage only ever needs to feed whichever one
+// is currently active.
+let currentMode = "groove"; // "groove" | "test"
+let testEngine = null;
+let testBpm = 100;
+let testSubdivision = "eighth"; // key into testarea.js's SUBDIVISIONS
+let testRunningStats = createRunningStats();
 
 // =============================================================================
 // DOM references
@@ -597,8 +982,32 @@ const elBpmUp5 = document.getElementById("bpm-up5");
 const elTransportBtn = document.getElementById("transport-btn");
 const elTransportState = document.getElementById("transport-state");
 
-const elGridRows = document.getElementById("grid-rows");
+const elNotationOutput = document.getElementById("notation-output");
 const elSummaryContent = document.getElementById("summary-content");
+
+const elMeterLaneGroove = document.getElementById("meter-lane-groove");
+const elMeterReadoutGroove = document.getElementById("meter-readout-groove");
+
+// Mode tabs
+const elTabGroove = document.getElementById("tab-groove");
+const elTabTest = document.getElementById("tab-test");
+const elModePanelGroove = document.getElementById("mode-panel-groove");
+const elModePanelTest = document.getElementById("mode-panel-test");
+
+// Test area
+const elTestBpmDisplay = document.getElementById("test-bpm-display");
+const elTestBpmInput = document.getElementById("test-bpm-input");
+const elTestBpmDown5 = document.getElementById("test-bpm-down5");
+const elTestBpmDown1 = document.getElementById("test-bpm-down1");
+const elTestBpmUp1 = document.getElementById("test-bpm-up1");
+const elTestBpmUp5 = document.getElementById("test-bpm-up5");
+const elTestTransportBtn = document.getElementById("test-transport-btn");
+const elTestTransportState = document.getElementById("test-transport-state");
+const elSubdivisionRow = document.getElementById("subdivision-row");
+const elMeterLaneTest = document.getElementById("meter-lane-test");
+const elMeterReadoutTest = document.getElementById("meter-readout-test");
+const elTestStatsContent = document.getElementById("teststats-content");
+const elResetStatsBtn = document.getElementById("reset-stats-btn");
 
 // =============================================================================
 // Note-mapping panel
@@ -742,6 +1151,15 @@ function handleMidiMessage(event) {
     const audioTime = (event.timeStamp - midiToAudioOffset) / 1000;
     actualHits.push({ voice: unmapped ? null : voice, time: audioTime });
   }
+
+  // Feed the Test area if IT is the one running. Every hit counts here
+  // (SPEC.md section D has no prescribed pattern/voice to match against) –
+  // it's measured against the nearest grid line regardless of which voice
+  // was struck.
+  if (testEngine && testEngine.isRunning && midiToAudioOffset !== null) {
+    const audioTime = (event.timeStamp - midiToAudioOffset) / 1000;
+    handleTestHit(audioTime);
+  }
 }
 
 function onMidiStateChange() {
@@ -763,62 +1181,155 @@ async function initMidi() {
 }
 
 // =============================================================================
-// Groove grid rendering
+// Groove notation rendering (VexFlow)
+//
+// Replaces increment 1's block grid entirely (SPEC.md section A). Renders
+// the fixed 1-bar groove as a real percussion staff: x-noteheads for the
+// hi-hat, normal noteheads for kick/snare, standard percussion-clef line
+// positions, beamed 8th notes.
+//
+// Per-voice notehead/line-position mapping (percussion clef, "key/octave"
+// is purely a line-position selector here, not a real pitch):
+//   hihatClosed -> "g/5/x2"  (x notehead, top space)
+//   snare       -> "c/5"     (normal notehead, middle line)
+//   kick        -> "f/4"     (normal notehead, bottom space)
+// A step with two simultaneous voices (kick+hihat, snare+hihat) becomes ONE
+// StaveNote with both keys stacked on the same stem (VexFlow supports
+// multiple simultaneous noteheads per StaveNote via the `keys` array).
+//
+// The moving playhead and on-staff ghost notes are drawn as plain SVG
+// overlays positioned using each StaveNote's own computed x (getAbsoluteX())
+// AFTER VexFlow has formatted/drawn the voice, rather than fighting
+// VexFlow's tick-based layout with a second quantized voice.
 // =============================================================================
 
-// Active voices in the fixed groove, in display order (top to bottom).
-const GRID_VOICES = ["hihatClosed", "snare", "kick"];
+const NOTEHEAD_KEY = {
+  hihatClosed: "g/5/x2",
+  snare: "c/5",
+  kick: "f/4",
+};
 
-function buildGrid() {
-  elGridRows.innerHTML = "";
-  cellState = {};
-  for (const voice of GRID_VOICES) {
-    const row = document.createElement("div");
-    row.className = "grid-row";
+let staveNotes = [];  // one VexFlow StaveNote per groove step (index 0..7)
+let vexRenderer = null;
+let vexContext = null;
+let vexStave = null;
 
-    const label = document.createElement("span");
-    label.className = "row-label";
-    label.textContent = VOICE_LABELS[voice];
-    row.appendChild(label);
+// Guarded the same way initMidi() guards navigator.requestMIDIAccess: check
+// for absence up front (VexFlow CDN blocked/offline/ad-blocker never
+// defines the global) and wrap the actual rendering in try/catch, so a
+// notation-library hiccup shows a clear message in the notation panel
+// instead of throwing an uncaught error that could take down the rest of
+// boot() (see the guarded call sites below and in boot()/switchMode()).
+function renderNotation() {
+  elNotationOutput.innerHTML = "";
 
-    for (let step = 0; step < STEPS_PER_BAR; step++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.dataset.voice = voice;
-      cell.dataset.step = String(step);
-      const hasHit = GROOVE[step].voices.includes(voice);
-      if (hasHit) cell.classList.add("expected");
-      row.appendChild(cell);
-    }
-    elGridRows.appendChild(row);
+  if (typeof VexFlow === "undefined") {
+    elNotationOutput.textContent = "Notation failed to load (VexFlow unavailable – check your connection and reload).";
+    return;
+  }
+
+  try {
+    const width = Math.max(340, Math.min(600, elNotationOutput.clientWidth || 600));
+
+    vexRenderer = new VexFlow.Renderer(elNotationOutput, VexFlow.Renderer.Backends.SVG);
+    vexRenderer.resize(width, 180);
+    vexContext = vexRenderer.getContext();
+
+    vexStave = new VexFlow.Stave(10, 30, width - 20);
+    vexStave.addClef("percussion").setTimeSignature("4/4");
+    vexStave.setContext(vexContext).draw();
+
+    staveNotes = GROOVE.map((entry) => {
+      const keys = entry.voices.map((v) => NOTEHEAD_KEY[v]);
+      return new VexFlow.StaveNote({ keys, duration: "8", stemDirection: -1 });
+    });
+
+    const voice = new VexFlow.Voice({ num_beats: 4, beat_value: 4 });
+    voice.addTickables(staveNotes);
+
+    new VexFlow.Formatter().joinVoices([voice]).formatToStave([voice], vexStave);
+
+    const beams = VexFlow.Beam.generateBeams(staveNotes);
+
+    voice.draw(vexContext, vexStave);
+    beams.forEach((b) => b.setContext(vexContext).draw());
+  } catch (err) {
+    console.error("Failed to render notation:", err);
+    elNotationOutput.textContent = "Notation failed to render. MIDI input and scoring still work.";
   }
 }
 
+// ---- Playhead: a vertical line swept across the staff in time with the click ----
+
+let playheadEl = null;
+
 function clearPlayhead() {
-  for (const cell of elGridRows.querySelectorAll(".cell.playhead")) {
-    cell.classList.remove("playhead");
+  if (playheadEl) {
+    playheadEl.remove();
+    playheadEl = null;
   }
 }
 
 function setPlayhead(step) {
   clearPlayhead();
-  if (step === null) return;
-  for (const cell of elGridRows.querySelectorAll(`.cell[data-step="${step}"]`)) {
-    cell.classList.add("playhead");
-  }
+  if (step === null || !staveNotes[step]) return;
+  const svg = elNotationOutput.querySelector("svg");
+  if (!svg) return;
+  const note = staveNotes[step];
+  const x = note.getAbsoluteX();
+  const yTop = vexStave.getYForLine(0) - 10;
+  const yBottom = vexStave.getYForLine(4) + 10;
+
+  playheadEl = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  playheadEl.setAttribute("x1", x);
+  playheadEl.setAttribute("x2", x);
+  playheadEl.setAttribute("y1", yTop);
+  playheadEl.setAttribute("y2", yBottom);
+  playheadEl.setAttribute("stroke", "var(--accent)");
+  playheadEl.setAttribute("stroke-width", "2");
+  svg.appendChild(playheadEl);
 }
 
-function colourCell(voice, step, classification) {
-  const cell = elGridRows.querySelector(`.cell[data-voice="${voice}"][data-step="${step}"]`);
-  if (!cell) return;
-  cell.classList.remove("on-target", "early", "late", "miss");
-  cell.classList.add(classification);
+// ---- On-staff ghost notes: actual hit, offset left(early)/right(late), coloured by band ----
+//
+// The expected StaveNote stays black (untouched). For each scored hit, draw
+// a small ghost notehead near the expected note's x position, shifted
+// horizontally by a fixed pixel nudge per direction (not literally
+// proportional to ms - the offsets involved are much smaller in on-screen
+// pixels than the staff is wide - just enough to visibly read as
+// "left of black note" / "right of black note"), coloured by closeness band.
+const GHOST_NUDGE_PX = 10;
+let ghostEls = [];
+
+function clearGhostNotes() {
+  for (const el of ghostEls) el.remove();
+  ghostEls = [];
 }
 
-function resetCellColours() {
-  for (const cell of elGridRows.querySelectorAll(".cell")) {
-    cell.classList.remove("on-target", "early", "late", "miss");
-  }
+function drawGhostNote(step, classification, direction) {
+  const svg = elNotationOutput.querySelector("svg");
+  const note = staveNotes[step];
+  if (!svg || !note) return;
+
+  const color = classification === "on-target" ? "var(--good)" : classification === "miss" ? "var(--miss)" : "var(--late)";
+  const x = note.getAbsoluteX() + (direction === "early" ? -GHOST_NUDGE_PX : direction === "late" ? GHOST_NUDGE_PX : 0);
+  const y = note.getYs()[0];
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", x);
+  circle.setAttribute("cy", y);
+  circle.setAttribute("r", "4.5");
+  circle.setAttribute("fill", color);
+  circle.setAttribute("fill-opacity", "0.85");
+  circle.setAttribute("stroke", "var(--bg)");
+  circle.setAttribute("stroke-width", "1");
+  svg.appendChild(circle);
+  ghostEls.push(circle);
+}
+
+function resetGroovePanel() {
+  clearGhostNotes();
+  renderNotation();
 }
 
 // =============================================================================
@@ -841,6 +1352,47 @@ function resetCellColours() {
 // threaded through as a second safety net for the matched case, but with a
 // clean partition it's no longer load-bearing for the extras case.)
 // =============================================================================
+
+// =============================================================================
+// Live timing meter (shared by Groove mode and Test mode)
+//
+// Horizontal lane, centre ON zone, EARLY (left) / LATE (right) per SPEC.md
+// section B. Each hit becomes a marker positioned by its ms offset,
+// coloured by closeness band, with the numeric ms shown in a readout below
+// the lane. The most recent hit is drawn larger/fully opaque; older markers
+// fade to a smaller, translucent dot so the lane stays readable at speed
+// without needing to be cleared between hits.
+//
+// Visual range: the lane represents +-METER_RANGE_MS. WINDOW_MS (80ms) is
+// the widest band with dedicated meaning (on/close); anything further out
+// is still a miss, so it's clamped to the lane edge rather than growing the
+// lane unboundedly for one wild hit.
+const METER_RANGE_MS = 120;
+
+function renderMeterHit(laneEl, readoutEl, offsetMs, direction) {
+  // Demote any existing "latest" marker to a regular faded dot.
+  const prevLatest = laneEl.querySelector(".meter-marker.latest");
+  if (prevLatest) prevLatest.classList.remove("latest");
+
+  const { color } = msToBand(offsetMs);
+  const clamped = Math.max(-METER_RANGE_MS, Math.min(METER_RANGE_MS, offsetMs));
+  const pct = 50 + (clamped / METER_RANGE_MS) * 50;
+
+  const marker = document.createElement("div");
+  marker.className = `meter-marker latest ${color}`;
+  marker.style.left = pct + "%";
+  laneEl.appendChild(marker);
+
+  const dirLabel = direction === "early" ? "EARLY" : direction === "late" ? "LATE" : "ON";
+  const dirClass = direction === "early" ? "dir-early" : direction === "late" ? "dir-late" : "";
+  const sign = offsetMs > 0 ? "+" : "";
+  readoutEl.innerHTML = `<span class="${dirClass}">${dirLabel}</span> ${sign}${offsetMs.toFixed(1)}ms`;
+}
+
+function resetMeter(laneEl, readoutEl) {
+  for (const marker of laneEl.querySelectorAll(".meter-marker")) marker.remove();
+  readoutEl.textContent = "–";
+}
 
 function scoreBar(barIndex) {
   const barExpected = expectedHits.filter((h) => h.barIndex === barIndex);
@@ -874,8 +1426,12 @@ function scoreBar(barIndex) {
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
     const exp = barExpected[i];
-    colourCell(exp.voice, exp.step, r.classification);
     runningTally[r.classification]++;
+
+    if (r.classification === "miss") continue; // no actual hit to place a ghost note or meter marker for
+    const { direction } = msToBand(r.offsetMs);
+    drawGhostNote(exp.step, r.classification, direction);
+    renderMeterHit(elMeterLaneGroove, elMeterReadoutGroove, r.offsetMs, direction);
   }
   runningTally.extra += extras.length;
 
@@ -914,7 +1470,8 @@ function resetScoringState() {
   scoredBarIndexes = new Set();
   consumedActualIndices = new Set();
   runningTally = { "on-target": 0, early: 0, late: 0, miss: 0, extra: 0 };
-  resetCellColours();
+  resetGroovePanel();
+  resetMeter(elMeterLaneGroove, elMeterReadoutGroove);
   elSummaryContent.innerHTML = "";
 }
 
@@ -1042,12 +1599,186 @@ function toggleTransport() {
 
 elTransportBtn.addEventListener("click", toggleTransport);
 
+// =============================================================================
+// Test / free-play area (SPEC.md section D)
+//
+// Metronome runs on a selectable subdivision (1/4, 1/8, 1/16); no
+// prescribed pattern. Every incoming hit is measured to the nearest grid
+// line (testarea.js's nearestGridLine) and shown on the live meter, folded
+// into resettable running stats (avg signed offset, % on-target,
+// tightest/loosest).
+// =============================================================================
+
+// Disables (while running) / re-enables (on stop) the Test-area's BPM and
+// subdivision controls. TestEngine's anchorTime and click cadence are
+// derived LIVE from its current bpm/stepsPerBeat on every tick (unlike
+// Groove mode, which bakes each hit's real scheduled time into
+// expectedHits) – changing tempo or subdivision mid-run would silently
+// re-extrapolate the grid nearestGridLine() judges hits against, out from
+// under the click that's actually playing. Disabling the controls while
+// testEngine.isRunning is the simplest fix: "no prescribed pattern, just
+// measure hits against a fixed, known grid" per SPEC.md section D.
+function setTestControlsDisabled(disabled) {
+  for (const btn of [elTestBpmDown5, elTestBpmDown1, elTestBpmUp1, elTestBpmUp5]) {
+    btn.disabled = disabled;
+  }
+  elTestBpmInput.disabled = disabled;
+  for (const btn of elSubdivisionRow.querySelectorAll(".subdivision-btn")) {
+    btn.disabled = disabled;
+  }
+}
+
+function applyTestBpm(v) {
+  const s = String(v).trim();
+  const n = s === "" ? NaN : Number(s);
+  testBpm = Number.isFinite(n) ? clamp(Math.round(n), 30, 300) : testBpm;
+  elTestBpmDisplay.textContent = String(testBpm);
+  elTestBpmInput.value = String(testBpm);
+  if (testEngine) testEngine.setBpm(testBpm);
+}
+
+elTestBpmDown5.addEventListener("click", () => applyTestBpm(testBpm - 5));
+elTestBpmDown1.addEventListener("click", () => applyTestBpm(testBpm - 1));
+elTestBpmUp1.addEventListener("click", () => applyTestBpm(testBpm + 1));
+elTestBpmUp5.addEventListener("click", () => applyTestBpm(testBpm + 5));
+elTestBpmInput.addEventListener("change", () => applyTestBpm(elTestBpmInput.value));
+
+function setSubdivision(key) {
+  if (!SUBDIVISIONS[key]) return;
+  testSubdivision = key;
+  for (const btn of elSubdivisionRow.querySelectorAll(".subdivision-btn")) {
+    btn.classList.toggle("active", btn.dataset.subdivision === key);
+  }
+  if (testEngine) testEngine.setStepsPerBeat(SUBDIVISIONS[key]);
+}
+
+elSubdivisionRow.addEventListener("click", (e) => {
+  const btn = e.target.closest(".subdivision-btn");
+  if (!btn) return;
+  setSubdivision(btn.dataset.subdivision);
+});
+
+function renderTestStats() {
+  const summary = summarizeStats(testRunningStats);
+  const rows = [
+    ["Hits", summary.count],
+    ["Avg offset (ms)", summary.avgOffsetMs !== null ? summary.avgOffsetMs.toFixed(1) : "–"],
+    ["On-target", summary.onTargetPct.toFixed(1) + "%"],
+    ["Tightest (ms)", summary.tightestMs !== null ? summary.tightestMs.toFixed(1) : "–"],
+    ["Loosest (ms)", summary.loosestMs !== null ? summary.loosestMs.toFixed(1) : "–"],
+  ];
+  elTestStatsContent.innerHTML = rows
+    .map(([label, val]) => `<div class="summary-row"><span class="label">${label}</span><span>${val}</span></div>`)
+    .join("");
+}
+
+function handleTestHit(audioTime) {
+  if (!testEngine) return;
+  const { offsetMs } = nearestGridLine(audioTime, testEngine.anchorTime, testEngine.bpm, testSubdivision);
+  const { direction } = msToBand(offsetMs);
+  renderMeterHit(elMeterLaneTest, elMeterReadoutTest, offsetMs, direction);
+  testRunningStats = addHitToStats(testRunningStats, offsetMs);
+  renderTestStats();
+}
+
+function resetTestStats() {
+  testRunningStats = createRunningStats();
+  renderTestStats();
+  resetMeter(elMeterLaneTest, elMeterReadoutTest);
+}
+
+elResetStatsBtn.addEventListener("click", resetTestStats);
+
+function startTestTransport() {
+  runToken++;
+  ensureAudioContext();
+  resetTestStats();
+
+  // Same performance.now() <-> audioCtx.currentTime reconciliation as the
+  // Groove transport (see startTransport above) – one offset captured at
+  // start, reused for every hit for the rest of this run.
+  midiToAudioOffset = performance.now() - audioCtx.currentTime * 1000;
+
+  testEngine = new TestEngine({
+    audioContext: audioCtx,
+    onStep: (stepInBeat, scheduledTime, isAccent, isCountIn) => {
+      playClick(audioCtx, scheduledTime, isAccent);
+      const delay = Math.max(0, (scheduledTime - audioCtx.currentTime) * 1000);
+      setTimeout(() => {
+        elTestTransportState.textContent = isCountIn ? "Count-in…" : "Playing";
+      }, delay);
+    },
+  });
+  testEngine.setBpm(testBpm);
+  testEngine.setStepsPerBeat(SUBDIVISIONS[testSubdivision]);
+  testEngine.start();
+
+  setTestControlsDisabled(true);
+  elTestTransportBtn.classList.add("running");
+  elTestTransportBtn.setAttribute("aria-label", "Stop");
+  elTestTransportBtn.innerHTML = "&#x25A0;";
+  elTestTransportState.textContent = "Count-in…";
+}
+
+function stopTestTransport() {
+  if (testEngine) {
+    testEngine.stop();
+    testEngine = null;
+  }
+  midiToAudioOffset = null;
+  setTestControlsDisabled(false);
+  elTestTransportBtn.classList.remove("running");
+  elTestTransportBtn.setAttribute("aria-label", "Start");
+  elTestTransportBtn.innerHTML = "&#x25B6;";
+  elTestTransportState.textContent = "Stopped";
+}
+
+function toggleTestTransport() {
+  if (testEngine && testEngine.isRunning) {
+    stopTestTransport();
+  } else {
+    startTestTransport();
+  }
+}
+
+elTestTransportBtn.addEventListener("click", toggleTestTransport);
+
+// =============================================================================
+// Mode tabs — Groove / Test are mutually exclusive; switching stops
+// whichever transport is currently running so a stray click/scoring window
+// from the old mode can't bleed into the new one.
+// =============================================================================
+
+function switchMode(mode) {
+  if (mode === currentMode) return;
+  if (engine && engine.isRunning) stopTransport();
+  if (testEngine && testEngine.isRunning) stopTestTransport();
+
+  currentMode = mode;
+  elTabGroove.classList.toggle("active", mode === "groove");
+  elTabTest.classList.toggle("active", mode === "test");
+  elModePanelGroove.classList.toggle("active", mode === "groove");
+  elModePanelTest.classList.toggle("active", mode === "test");
+
+  // The notation SVG is sized from its container's clientWidth at render
+  // time; re-render on switching TO Groove mode in case it was built while
+  // the panel was display:none (clientWidth would have been 0).
+  if (mode === "groove") renderNotation();
+}
+
+elTabGroove.addEventListener("click", () => switchMode("groove"));
+elTabTest.addEventListener("click", () => switchMode("test"));
+
 document.addEventListener("keydown", (e) => {
   if (e.code !== "Space") return;
   const tag = (document.activeElement?.tagName ?? "").toLowerCase();
   if (tag === "input" || tag === "textarea" || tag === "select") return;
   e.preventDefault();
-  toggleTransport();
+  if (currentMode === "groove") {
+    toggleTransport();
+  } else {
+    toggleTestTransport();
+  }
 });
 
 // =============================================================================
@@ -1069,10 +1800,25 @@ async function boot() {
   }
 
   renderMappingPanel();
-  buildGrid();
+  // renderNotation() already catches its own errors internally (see its
+  // definition), but this try/catch is a second safety net: it guarantees
+  // that ANY unexpected failure here still can't stop initMidi() below from
+  // running – a notation-library hiccup must never silently take MIDI input
+  // down with it (increment 1's MIDI input is not in scope for this
+  // increment's changes).
+  try {
+    renderNotation();
+  } catch (err) {
+    console.error("renderNotation() failed unexpectedly during boot:", err);
+  }
   elBpmDisplay.textContent = String(currentBpm);
   elBpmInput.value = String(currentBpm);
   elTransportState.textContent = "Stopped";
+
+  elTestBpmDisplay.textContent = String(testBpm);
+  elTestBpmInput.value = String(testBpm);
+  elTestTransportState.textContent = "Stopped";
+  renderTestStats();
 
   await initMidi();
 }

@@ -1,155 +1,141 @@
-# Increment 1 – MIDI-in + note-mapping settings + live scoring
+# Increment 2 – Real notation + readable timing feedback + Test area
 
-**Product-owner spec.** Drum Trainer, first slice. Parent PRD:
+**Product-owner spec.** Drum Trainer, second slice. Parent PRD:
 `PRDs/2-in-progress/2026-07-01-drum-trainer.md`. Full source spec (iCloud docs):
-`projects/personal-projects/drum-trainer/increment-1-midi-scoring.md`. This in-repo
-copy is the build target for `/loop`.
+`projects/personal-projects/drum-trainer/increment-2-notation-timing-feedback.md`.
+This in-repo copy is the build target for `/loop`. Increment 1 is committed on
+`main` (`98d138c`).
 
 **Runs on:** Chrome, served over HTTPS (or `http://localhost`) – Web MIDI needs a
 secure context. **Static site**, single page, no framework, no build step.
 
 ---
 
-## Goal of this increment
+## Why this increment (James's feedback on increment 1)
 
-Prove the novel core end-to-end: plug the EFNOTE 5 in, tell the app which pad is
-which drum, play a simple fixed groove to a click, and get per-hit
-on-target/early/late/missed feedback with a summary. No authoring, no notation
-rendering, no app drum sounds yet – those are later increments.
+1. **Feedback is unreadable while playing.** It's just red/blue/yellow symbols with
+   no legend and no sense of *where* a hit fell. James can't decode it mid-play.
+2. **Blocks, not notation.** He wants real sheet-music-style drum notation, with the
+   expected note in black and his actual hit shown as a ghosted/coloured note where
+   it landed.
 
-## User story
-
-As a drummer, I plug my EFNOTE 5 into the mini, open the site, confirm my pad
-mapping, pick a tempo, hit start, play a basic rock beat, and see which hits were
-early/late/on-target plus an accuracy score for the loop.
+Core fix: **make timing = position, not just colour**, in two complementary views,
+replace the grid with real notation, and add a dedicated **Test / free-play area**
+so he can just run the metronome and see where his hits land.
 
 ---
 
 ## Scope – what's in
 
-### 1. Web MIDI connection
-- Request MIDI access (`navigator.requestMIDIAccess`, `sysex: false`).
-- List available MIDI **inputs**; let the user pick one (default to the first, or
-  remember last-used). Show connection status (connected / none found / permission
-  denied) with a clear message.
-- Live "last hit" read-out: show the incoming **note number + velocity** of the most
-  recent Note-On, so the user can see the kit is talking to the app. Doubles as the
-  mapping diagnostic.
-- Handle device connect/disconnect events gracefully (re-populate the input list).
+### A. Real notation rendering (VexFlow)
+- **Engine: VexFlow** (programmatic – needed to draw live ghost notes at arbitrary
+  offsets and recolour them; PO call, reversible). Load it as a pinned static
+  library (CDN `<script>` tag or vendored file) – no build step.
+- Render a proper **5-line percussion staff** with correct drum notation:
+  **x-noteheads** for hi-hat/cymbals, **normal noteheads** for kick/snare/toms,
+  standard staff positions, stems/beams for the subdivision.
+- Re-render the **fixed 1-bar rock groove** from increment 1 (hi-hat on 8ths, kick
+  on 1 & 3, snare on 2 & 4) as real notation, **replacing the block grid entirely**.
+- **Moving playhead** sweeps the staff in time with the metronome click.
 
-### 2. Note-mapping settings panel *(James's priority – make it prominent)*
-- A settings panel listing the **drum voices** for this increment:
-  kick, snare, hi-hat (closed), hi-hat (open), hi-hat pedal, tom 1, tom 2, floor
-  tom, crash, ride. (Enough for a basic groove + headroom; expandable.)
-- Each voice shows its assigned **MIDI note number**, editable two ways:
-  1. Type/select the note number directly.
-  2. **"Learn" mode:** click Learn on a voice, hit that pad, the app captures the
-     incoming note and assigns it.
-- **Default map = EFNOTE 5 / General MIDI** pre-filled so it works out of the box:
-  kick 36, snare 38, closed hat 42, open hat 46, hat pedal 44, toms 48/45/43,
-  crash 49, ride 51. User can override any of them.
-- Persist the map (see Persistence). A "reset to GM default" button.
-- Edge cases: warn if two voices are mapped to the same note; a pad that hits an
-  unmapped note is shown in the "last hit" read-out as unmapped.
+### B. Readable timing feedback (BOTH views)
+- **Live timing meter** (read-while-playing view): a horizontal lane with a centre
+  **ON** zone and **EARLY** (left) / **LATE** (right) sides. Each hit appears as a
+  marker positioned by its ms offset, colour-coded, with the **numeric ms** shown.
+  Most-recent hit is prominent; glanceable at speed. Primary fix for "I can't tell
+  where things are falling."
+- **On-staff ghost notes** (study-after view): for each expected note, when James
+  hits it, draw his **actual hit as a ghosted/coloured notehead** horizontally
+  offset from the black target note (left = early, right = late), coloured by band.
+  The expected note stays **black**.
+- **Legend, always visible.** State plainly what each colour means and that
+  horizontal position = early/late. Palette = **three clear states** (below).
 
-### 3. The practice loop
-- **One fixed groove:** a 1-bar 4/4 basic rock beat (hi-hat on 8ths, kick on 1 & 3,
-  snare on 2 & 4). Hard-coded; no editing.
-- **Minimal grid display** (NOT full notation): a row per active voice, columns =
-  subdivisions of the bar (8th-note grid), cells marked where a hit is expected. A
-  moving playhead shows the current position.
-- **Transport:** tempo (BPM, manual entry + fine +/-), count-in (1 bar of clicks),
-  start/stop (button + spacebar). Loop the bar continuously until stopped.
-- **Click:** Web Audio look-ahead scheduling (schedule on the audio clock, not
-  `setInterval` for the audio itself). Accent on beat 1. This is the timing
-  reference the scoring is measured against.
+### C. Colour + meaning (fixed, with legend)
+- **Green = on-target** (within ±30 ms).
+- **Amber = close** (30–80 ms early or late).
+- **Red = off / miss** (>80 ms or no matching hit).
+- **Direction (early vs late) is shown by position** (meter side + staff offset),
+  not by colour – colour only ever encodes *how close*, position encodes *which
+  way*. A small always-on legend explains this.
 
-### 4. Scoring
-- For each expected hit (voice + expected time), compare the **actual MIDI hit
-  timestamp** to the expected time and classify:
-  - **On-target:** within **±30 ms**
-  - **Early / Late:** between 30 ms and **±80 ms** (signed – early vs late)
-  - **Miss:** no matching hit within ±80 ms of the expected time
-  - **Extra:** a hit with no expected note nearby (counted, shown, not fatal)
-- Use the MIDI event timestamp (`event.timeStamp` / a `performance.now()` capture),
-  reconciled to the audio-clock schedule, for accuracy – don't score off render
-  timing.
-- **Visual feedback:** colour each grid cell as it's judged (on-target/early/late/
-  miss), live during the loop.
-- **Summary:** after each loop pass (and a running tally), show counts and an
-  accuracy %: on-target / early / late / miss, plus average signed timing offset
-  (ms) so the user learns if they rush or drag.
-
-### 5. Persistence
-- Save the **MIDI map**, **selected input**, and **tempo** so the app reopens where
-  it was. Use **IndexedDB**. No accounts, single machine.
+### D. Test / free-play area (built first in this increment)
+- A **mode/tab** separate from groove-scoring. Metronome runs; **no prescribed
+  pattern**.
+- Controls: **tempo**, **subdivision** (1/4, 1/8, 1/16 for v1; triplets later),
+  start/stop, count-in.
+- Every hit is measured to the **nearest grid line** of the chosen subdivision and
+  shown on the **live timing meter** (early/on/late + ms). Optional light reference
+  staff/grid showing the subdivision with ghost notes at the hit positions.
+- **Running stats** (resettable): average signed offset (rush vs drag tendency),
+  % on-target, tightest/loosest hit. Simple, no persistence needed this round.
 
 ---
 
-## Out of scope (this increment)
+## Out of scope (later increments)
 
-- App's own drum sounds / hearing the groove played back (increment 2).
-- Real notation rendering – Verovio/VexFlow (increment 2).
+- The app's own drum **sounds** / hearing the groove played back → **increment 3**.
+  This increment stays visual + metronome click only.
 - Per-part volume mixer (increment 3).
-- Authoring / editing grooves, multiple grooves, sections (increment 4).
-- Recording/replaying the performance, cross-session progress (increments 5/7).
-- Adjustable scoring tolerance UI (fixed bands this round; expose later).
+- Authoring/editing grooves, multiple grooves, sections (increment 4).
+- MusicXML/PDF import + Verovio display (increment 8).
+- Adjustable scoring tolerance UI (bands stay ±30/±80 ms; expose later).
+- Triplet/compound subdivisions in the Test area (v1 = 1/4, 1/8, 1/16).
 
 ---
 
 ## Acceptance criteria
 
-`[auto]` = QA tests headless (keep the scoring + mapping logic as pure modules);
+`[auto]` = QA tests headless (keep the new maths as pure modules);
 `[human]` = James accepts on screen with the kit.
 
-1. **[human]** On load, the app requests MIDI access and lists inputs; selecting the
-   EFNOTE shows "connected" and the last-hit read-out updates when any pad is struck.
-2. **[auto]** The mapping panel shows all listed voices with the GM defaults
-   pre-filled and persists edits across a reload (map logic + storage is a pure
-   module; UI wires to it).
-3. **[human]** "Learn" mode assigns a voice's note by capturing the next pad hit.
-4. **[auto]** A hit on a note number not in the map is classified/flagged as
-   **unmapped** by the pure input handler (read-out shows it as unmapped).
-5. **[human]** Setting a tempo and pressing start gives a 1-bar count-in, then loops
-   the fixed groove with a moving playhead and an accented beat 1.
-6. **[auto]** The scoring module classifies hits on-target/early/late/miss/extra
-   using ±30/±80 ms bands and produces a summary (counts, accuracy %, average signed
-   offset). **Boundary cases covered:** exactly 30 ms, exactly 80 ms, double hits on
-   one expected note, unmapped notes, early vs late sign.
-7. **[auto]** Selected input, map, and tempo survive a reload (persisted in
-   IndexedDB and restored).
-8. **[human]** Works in Chrome over HTTPS; degrades with a clear message if Web MIDI
-   is unavailable (Safari / `file://`).
+1. **[human]** The fixed groove renders as **real drum notation** on a 5-line staff
+   (correct noteheads: x for hats/cymbals, normal for kick/snare/toms), not blocks,
+   with a moving playhead in time with the click.
+2. **[human]** A **live timing meter** shows each hit positioned by ms offset
+   (EARLY|ON|LATE), colour-coded green/amber/red, with the numeric ms – readable
+   while playing.
+3. **[human]** Each expected note shows the **black target** plus the
+   **ghosted/coloured actual hit** offset left (early) / right (late) on the staff.
+4. **[human]** An **always-visible legend** explains the three colours and that
+   position = early/late.
+5. **[auto + human]** A **Test / free-play area** runs the metronome with a
+   selectable subdivision (1/4, 1/8, 1/16), measures each hit to the **nearest grid
+   line**, shows it on the meter, and displays **resettable running stats** (avg
+   offset, % on-target). The nearest-grid-line selection, ms→colour band, avg signed
+   offset, and % on-target maths are a **pure module**, unit-tested headless.
+6. **[auto]** No regression to increment 1's MIDI input, mapping panel, or scoring
+   maths (existing `mapping.js` / `scoring.js` tests still pass).
+7. **[human]** Works in Chrome over HTTPS; clear message if Web MIDI is unavailable.
 
 ## PO calls (flag to change)
 
-- Scoring bands **±30 ms on-target / ±80 ms early-late**, fixed this round.
-- Voice list capped at the 10 above for the basic groove; grow when authoring lands.
-- Minimal grid, not notation – deferring the rendering engine to increment 2.
-- IndexedDB for persistence (not File System Access) this round.
+- VexFlow (not Verovio) for the rendering engine this round.
+- Three-state colour (green/amber/red) = closeness; position = direction; legend on.
+- Test area first, then apply the same feedback views to the groove.
+- Bands unchanged (±30 / ±80 ms). No app sounds this increment.
 
 ## Notes for the coder
 
 - **Single `index.html`**, static, no build. Vanilla JS. Deploys to GitHub Pages /
-  Cloudflare Pages as-is.
-- Keep **scoring** and **note-mapping** as **pure modules** (data in → result out,
-  zero DOM / zero Web MIDI references) so QA can unit-test criteria 2, 4, 6, 7
-  headless by feeding synthetic Note-On timestamps at known offsets. Export them in
-  a way a Node `.mjs` test can import (e.g. a shared `scoring.js`/`mapping.js` the
-  page and the tests both load, or guarded `export`s).
-- **Look-ahead click:** reuse the metronome's drift-free audio-clock scheduler
-  approach (anchor time + beatIndex, no beat-to-beat accumulation). The expected-hit
-  times for scoring come from the same anchored schedule so scoring and click share
-  one clock.
-- Reconcile `event.timeStamp` (Web MIDI, `performance.now()` domain) to the audio
-  clock once at start (capture the offset between `performance.now()` and
-  `audioCtx.currentTime`) so hit timestamps compare cleanly to scheduled hit times.
+  Cloudflare Pages as-is. Load **VexFlow** from a pinned CDN URL (or vendor the file
+  in-repo) via a plain `<script>` tag – no bundler.
+- Keep the **Test-area maths as a pure module** (data in → result out, zero DOM /
+  zero Web MIDI): nearest-grid-line selection given (hitTime, tempo, subdivision,
+  bar anchor), ms→colour band (reuse the ±30/±80 thresholds from `scoring.js` –
+  don't duplicate the constants), running stats (avg signed offset, % on-target,
+  tightest/loosest). Export in a way a Node `.mjs` test can import, like the
+  existing pure modules.
+- **Reuse** the drift-free audio-clock scheduler pattern (`PracticeEngine`) for the
+  Test-area metronome and the moving playhead. Reconcile `event.timeStamp` to the
+  audio clock exactly as increment 1 does.
+- Don't regress the existing scoring/mapping pure modules or their tests.
 
 ## What QA can / cannot verify
 
-- **Can (auto):** 2, 4, 6, 7 – mapping defaults + persistence, unmapped-note
-  detection, the full scoring classification/summary incl. boundary cases, and
-  IndexedDB round-trip. Assert on the pure modules + storage.
-- **Cannot – needs James + the kit on the mini:** 1, 3, 5, 8 – live MIDI connect,
-  Learn-mode pad capture, the transport/playhead/count-in on screen, and the
-  HTTPS/Web-MIDI-unavailable behaviour in a real browser.
+- **Can (auto):** 5 (the new Test-area maths – nearest-grid selection, ms→band, avg
+  signed offset, % on-target, boundaries at exactly 30 ms and 80 ms, hits exactly
+  between two grid lines, rapid double hits), 6 (existing tests still green).
+- **Cannot – needs James + the kit on the mini:** 1, 2, 3, 4, 7 – the VexFlow
+  staff/noteheads/playhead, the live meter readability, on-staff ghost notes, the
+  legend, and the HTTPS/Web-MIDI-unavailable behaviour in a real browser.
