@@ -16,7 +16,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  NOTEHEAD_KEY,
   resolveNotehead,
   xOffsetPxFromOffsetMs,
   WINDOW_MS_CAP,
@@ -25,29 +24,29 @@ import {
   resolveStaffPosition,
 } from "./teststaff.js";
 import { nearestGridLine, secondsPerGridStep } from "./testarea.js";
+import { DEFAULT_STAFF_LAYOUT } from "./stafflayout.js";
 
 // -----------------------------------------------------------------------------
 // Voice -> staff notehead mapping
+//
+// SPEC.md increment 4 retires teststaff.js's own partial (3-voice)
+// NOTEHEAD_KEY constant in favour of stafflayout.js's full 10-voice map,
+// re-exporting resolveNotehead(layout, voice) from there (see teststaff.js
+// and stafflayout.js for the single-source-of-truth rationale). Full
+// coverage of the default map + all 10 voices lives in test-stafflayout.mjs;
+// these two tests just confirm teststaff.js's re-export still resolves the
+// three voices this suite has always covered, at their EXISTING positions
+// (SPEC.md AC7 — no regression for kick/snare/hihatClosed).
 // -----------------------------------------------------------------------------
 
-test("resolveNotehead: kick/snare/hihatClosed match the groove view's NOTEHEAD_KEY mapping", () => {
-  assert.equal(resolveNotehead("kick"), "f/4");
-  assert.equal(resolveNotehead("snare"), "c/5");
-  assert.equal(resolveNotehead("hihatClosed"), "g/5/x2");
+test("resolveNotehead: kick/snare/hihatClosed match their EXISTING (unchanged) positions", () => {
+  assert.equal(resolveNotehead(DEFAULT_STAFF_LAYOUT, "kick"), "f/4");
+  assert.equal(resolveNotehead(DEFAULT_STAFF_LAYOUT, "snare"), "c/5");
+  assert.equal(resolveNotehead(DEFAULT_STAFF_LAYOUT, "hihatClosed"), "g/5/x2");
 });
 
-test("resolveNotehead: an out-of-scope voice (e.g. crash) returns null, not a guess", () => {
-  assert.equal(resolveNotehead("crash"), null);
-  assert.equal(resolveNotehead("ride"), null);
-  assert.equal(resolveNotehead("tom1"), null);
-});
-
-test("NOTEHEAD_KEY: exactly the three groove-clef voices, matching index.html's mapping", () => {
-  assert.deepEqual(NOTEHEAD_KEY, {
-    hihatClosed: "g/5/x2",
-    snare: "c/5",
-    kick: "f/4",
-  });
+test("resolveNotehead: an unknown voice returns null, not a guess", () => {
+  assert.equal(resolveNotehead(DEFAULT_STAFF_LAYOUT, "nope"), null);
 });
 
 // -----------------------------------------------------------------------------

@@ -9,12 +9,13 @@
 // exactly like testarea.js / scoring.js / mapping.js.
 //
 // Responsibilities:
-//   1. Voice -> staff line-position: the SAME per-voice percussion-clef
-//      key/notehead mapping the groove view uses (NOTEHEAD_KEY), so the
-//      test staff and groove staff always agree on where a voice sits and
-//      whether it's an x-notehead or a normal notehead. This is the single
-//      source of truth — index.html imports it rather than keeping its own
-//      copy.
+//   1. Voice -> staff line-position: as of SPEC.md increment 4, this is
+//      resolveNotehead() re-exported from stafflayout.js — the full
+//      10-voice staff-layout map that is now the SINGLE SOURCE OF TRUTH for
+//      voice -> staff position, shared by the groove view, the editor
+//      stave, AND this Test staff. (Increment 3's partial 3-voice
+//      NOTEHEAD_KEY constant is retired per SPEC.md's explicit instruction
+//      not to leave a second hard-coded copy — see stafflayout.js.)
 //   2. x-position from timing: given a hit's signed ms offset from the
 //      nearest subdivision grid line (from testarea.js's nearestGridLine),
 //      map it to a horizontal pixel offset from that grid line's notehead —
@@ -31,31 +32,13 @@
 
 // ---- Voice -> staff line-position (percussion clef) ----
 //
-// Identical mapping to the groove view's NOTEHEAD_KEY (index.html). Kept
-// here as the single source of truth per SPEC.md's instruction not to
-// duplicate line-position constants; index.html imports this rather than
-// declaring its own copy.
-//   hihatClosed -> "g/5/x2"  (x notehead, top space)
-//   snare       -> "c/5"     (normal notehead, middle line)
-//   kick        -> "f/4"     (normal notehead, bottom space)
-//
-// Only the three groove voices are mapped (kick/snare/hihatClosed) because
-// that's all NOTEHEAD_KEY covered as of increment 2. A hit on any other
-// mapped voice (e.g. crash, ride, toms) has no defined staff line yet —
-// resolveNotehead returns null for those so the caller can decide how to
-// handle an out-of-scope voice rather than silently guessing a position.
-export const NOTEHEAD_KEY = {
-  hihatClosed: "g/5/x2",
-  snare: "c/5",
-  kick: "f/4",
-};
-
-// Given a voice name, return its VexFlow key/notehead string, or null if
-// the voice has no defined staff position (out of scope for this
-// increment's fixed three-voice groove clef).
-export function resolveNotehead(voice) {
-  return NOTEHEAD_KEY[voice] ?? null;
-}
+// Re-exported from stafflayout.js so existing callers (index.html) can keep
+// importing resolveNotehead from teststaff.js without churn, while there is
+// still only ONE place (stafflayout.js) that actually defines the mapping.
+// resolveNotehead(layout, voice) now takes the layout explicitly (it's
+// editable + persisted from increment 4 on) — pass the app's current
+// layout (default or user-edited) rather than a module-level constant.
+export { resolveNotehead } from "./stafflayout.js";
 
 // ---- x-position from timing ----
 //

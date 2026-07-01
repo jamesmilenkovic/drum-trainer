@@ -165,6 +165,50 @@
     }
     #reset-map-btn:hover { background: var(--border); color: var(--text); }
 
+    /* ---- Staff-layout panel (mirrors the mapping panel above) ---- */
+    #stafflayout-panel .voice-row {
+      display: grid;
+      grid-template-columns: 1fr 90px 100px;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #stafflayout-panel .voice-row:last-child { border-bottom: none; }
+    #stafflayout-panel .voice-row input[type="text"] {
+      width: 70px;
+      text-align: center;
+      font-size: 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 6px;
+    }
+    #stafflayout-panel .voice-row input[type="text"].key-invalid {
+      border-color: var(--miss);
+      color: var(--miss);
+    }
+    #stafflayout-panel .voice-row select {
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 6px;
+    }
+    #reset-stafflayout-btn {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    #reset-stafflayout-btn:hover { background: var(--border); color: var(--text); }
+
     /* ---- Transport ---- */
     #transport-controls {
       display: flex;
@@ -369,6 +413,51 @@
     .meter-readout .dir-early { color: var(--early); }
     .meter-readout .dir-late  { color: var(--late); }
 
+    /* ---- Groove editor (SPEC.md increment 4) ---- */
+    #editor-panel { max-width: 620px; }
+    #editor-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+    .editor-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .editor-field select {
+      font-size: 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 6px 8px;
+    }
+    #editor-clear-btn {
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      cursor: pointer;
+      height: 34px;
+    }
+    #editor-clear-btn:hover { background: var(--border); color: var(--text); }
+    #editor-output {
+      width: 100%;
+      overflow-x: auto;
+      background: #ffffff;
+      border-radius: var(--radius);
+      padding: 8px 0;
+      cursor: pointer;
+    }
+    #editor-output svg { display: block; margin: 0 auto; }
+
     /* ---- Notation (VexFlow) ---- */
     /* White background behind both staves (SPEC.md increment 3, section B):
        VexFlow's default stroke colour is black, so a plain white background
@@ -507,6 +596,15 @@
     <button id="reset-map-btn">Reset to GM default</button>
   </section>
 
+  <!-- Staff-layout (notation display) panel (SPEC.md increment 4, section
+       A2) — mirrors the Note Mapping panel above, but edits voice -> staff
+       position/notehead instead of voice -> MIDI note. -->
+  <section class="panel" id="stafflayout-panel">
+    <h2>Staff Layout</h2>
+    <div id="stafflayout-rows"></div>
+    <button id="reset-stafflayout-btn">Reset to default layout</button>
+  </section>
+
   <!-- Legend: always visible in both modes, per SPEC.md section B/C -->
   <section class="panel" id="legend-panel">
     <h2>Legend</h2>
@@ -542,7 +640,50 @@
       <div id="transport-state"></div>
     </section>
 
-    <!-- Groove notation (VexFlow) -->
+    <!-- Groove editor (SPEC.md increment 4, section B/C): click-on-the-stave
+         editing, presets, bars/subdivision controls. The edited/loaded
+         groove here becomes the practice groove the "Groove" panel below
+         displays (section D). -->
+    <section class="panel" id="editor-panel">
+      <h2>Groove Editor</h2>
+      <div id="editor-controls">
+        <label class="editor-field">
+          Preset
+          <select id="preset-select">
+            <option value="">— choose a preset —</option>
+          </select>
+        </label>
+        <label class="editor-field">
+          Time sig
+          <select id="editor-timesig-select">
+            <option value="4/4" selected>4/4</option>
+            <option value="3/4">3/4</option>
+          </select>
+        </label>
+        <label class="editor-field">
+          Bars
+          <select id="editor-bars-select">
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+        </label>
+        <label class="editor-field">
+          Subdivision
+          <select id="editor-subdivision-select">
+            <option value="quarter">1/4</option>
+            <option value="eighth" selected>1/8</option>
+            <option value="sixteenth">1/16</option>
+          </select>
+        </label>
+        <button id="editor-clear-btn">Clear</button>
+      </div>
+      <div id="editor-output"></div>
+      <p class="hint">Click a voice's line/space at a beat to add or remove a note.</p>
+    </section>
+
+    <!-- Groove notation (VexFlow) — displays the current practice groove
+         (the editor's groove above, or a preset once loaded), per SPEC.md
+         increment 4 section D. -->
     <section class="panel" id="notation-panel">
       <h2>Groove</h2>
       <div id="notation-output"></div>
@@ -652,12 +793,35 @@ import {
 } from "./testarea.js";
 
 import {
-  NOTEHEAD_KEY,
-  resolveNotehead,
   xOffsetPxFromOffsetMs,
   VISIBLE_BARS,
   resolveStaffPosition,
 } from "./teststaff.js";
+
+// resolveNotehead is now re-exported from stafflayout.js (SPEC.md increment
+// 4) — imported directly from there since index.html needs the OTHER
+// stafflayout.js exports (default layout, normalisation) anyway.
+import {
+  getDefaultStaffLayout,
+  normaliseStaffLayout,
+  resolveNotehead,
+} from "./stafflayout.js";
+
+import {
+  createGroove,
+  addNote as grooveAddNote,
+  toggleNote as grooveToggleNote,
+  setBars as grooveSetBars,
+  setSubdivision as grooveSetSubdivision,
+  setTimeSignature as grooveSetTimeSignature,
+  stepsPerBar as grooveStepsPerBar,
+  totalSteps as grooveTotalSteps,
+  notesAtPosition as grooveNotesAtPosition,
+} from "./groove.js";
+
+import { hitTest as editorHitTest, drawXY as editorDrawXY } from "./editorhit.js";
+
+import { PRESETS } from "./presets.js";
 
 // =============================================================================
 // PracticeEngine
@@ -691,6 +855,22 @@ const GROOVE = [
 
 const STEPS_PER_BAR = 8; // 8th-note grid over 4/4
 const BEATS_PER_BAR = 4;
+
+// Builds a groove.js model instance equivalent to the fixed GROOVE array
+// above (SPEC.md section D: "the default on load is a shared-model instance
+// equivalent to the current hard-coded groove"). Built FROM the same GROOVE
+// array (not a separately hand-typed copy) so the two can never drift apart.
+// This is DISPLAY only — PracticeEngine keeps scheduling/scoring from the
+// GROOVE array directly, unchanged.
+function defaultPracticeGroove() {
+  let g = createGroove({ timeSignature: { beatsPerBar: BEATS_PER_BAR, beatValue: 4 }, bars: 1, subdivision: "eighth" });
+  for (const entry of GROOVE) {
+    for (const voice of entry.voices) {
+      g = grooveAddNote(g, voice, entry.step);
+    }
+  }
+  return g;
+}
 
 class PracticeEngine {
   static BPM_MIN = 30;
@@ -990,6 +1170,27 @@ let midiInputs = [];
 let activeInput = null;
 let learningVoice = null; // voice currently in "Learn" capture mode, or null
 
+// Staff-layout (notation display) map — SPEC.md increment 4 section A2.
+// Single source of truth for voice -> staff position/notehead, used by the
+// Groove view, the editor stave, and the Test staff alike.
+let staffLayout = getDefaultStaffLayout();
+
+// The groove-model instance (groove.js) currently shown in the "Groove"
+// panel below the editor (SPEC.md section D). Defaults to an instance
+// equivalent to the app's original hard-coded GROOVE (see PracticeEngine's
+// GROOVE constant above) so existing display/scoring behaviour holds.
+// NOTE: scoring stays wired to the fixed GROOVE array / PracticeEngine —
+// this groove-model instance is DISPLAY ONLY this increment (SPEC.md
+// section D explicitly defers "wire scoring to arbitrary grooves" to
+// increment 6).
+let practiceGroove = defaultPracticeGroove();
+
+// The editor's own in-memory groove (SPEC.md section B) — starts as a copy
+// of practiceGroove so the editor and the Groove view agree on load;
+// diverges as soon as the user edits it (still in-memory only, per SPEC.md
+// "no disk persistence of user grooves this round").
+let editorGroove = practiceGroove;
+
 let audioCtx = null;
 let engine = null;
 let midiToAudioOffset = null; // performance.now() -> audioCtx.currentTime offset, captured at start()
@@ -1031,6 +1232,16 @@ const elLastHit = document.getElementById("last-hit");
 const elVoiceRows = document.getElementById("voice-rows");
 const elDupWarning = document.getElementById("dup-warning");
 const elResetMapBtn = document.getElementById("reset-map-btn");
+
+const elStaffLayoutRows = document.getElementById("stafflayout-rows");
+const elResetStaffLayoutBtn = document.getElementById("reset-stafflayout-btn");
+
+const elPresetSelect = document.getElementById("preset-select");
+const elEditorTimesigSelect = document.getElementById("editor-timesig-select");
+const elEditorBarsSelect = document.getElementById("editor-bars-select");
+const elEditorSubdivisionSelect = document.getElementById("editor-subdivision-select");
+const elEditorClearBtn = document.getElementById("editor-clear-btn");
+const elEditorOutput = document.getElementById("editor-output");
 
 const elBpmDisplay = document.getElementById("bpm-display");
 const elBpmInput = document.getElementById("bpm-input");
@@ -1138,6 +1349,86 @@ elResetMapBtn.addEventListener("click", () => {
 
 function persistMap() {
   dbSet("noteMap", noteMap).catch((err) => console.error("Failed to persist note map:", err));
+}
+
+// =============================================================================
+// Staff-layout panel (SPEC.md increment 4, section A2) — mirrors the
+// note-mapping panel above, but edits voice -> staff position/notehead
+// (stafflayout.js's map) instead of voice -> MIDI note (mapping.js's map).
+// Editing here re-renders every notation view (Groove, editor, Test staff)
+// since they all read from the single `staffLayout` variable.
+// =============================================================================
+
+// A key string is only accepted (and persisted) if it still parses as a
+// plausible VexFlow line/space key (letter a-g + "/" + integer octave) —
+// same permissive check stafflayout.js's normaliseStaffLayout uses, kept in
+// sync so a value good enough to save is also good enough to survive a
+// reload. An invalid in-progress edit is visibly flagged (key-invalid) but
+// NOT written into staffLayout/persisted until it's valid again.
+function isPlausibleKeyInput(key) {
+  return /^[a-g]\/\d+$/.test(key.trim());
+}
+
+function renderStaffLayoutPanel() {
+  elStaffLayoutRows.innerHTML = "";
+  for (const voice of VOICES) {
+    const row = document.createElement("div");
+    row.className = "voice-row";
+
+    const name = document.createElement("span");
+    name.className = "voice-name";
+    name.textContent = VOICE_LABELS[voice];
+
+    const keyInput = document.createElement("input");
+    keyInput.type = "text";
+    keyInput.value = staffLayout[voice].key;
+    keyInput.dataset.voice = voice;
+    keyInput.addEventListener("change", () => {
+      const raw = keyInput.value.trim();
+      if (!isPlausibleKeyInput(raw)) {
+        keyInput.classList.add("key-invalid");
+        return;
+      }
+      keyInput.classList.remove("key-invalid");
+      staffLayout = { ...staffLayout, [voice]: { ...staffLayout[voice], key: raw } };
+      persistStaffLayout();
+      renderAllNotation();
+    });
+
+    const noteheadSelect = document.createElement("select");
+    for (const [value, label] of [["normal", "Normal"], ["x", "X"]]) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = label;
+      if (staffLayout[voice].notehead === value) opt.selected = true;
+      noteheadSelect.appendChild(opt);
+    }
+    noteheadSelect.addEventListener("change", () => {
+      staffLayout = { ...staffLayout, [voice]: { ...staffLayout[voice], notehead: noteheadSelect.value } };
+      persistStaffLayout();
+      renderAllNotation();
+    });
+
+    row.append(name, keyInput, noteheadSelect);
+    elStaffLayoutRows.appendChild(row);
+  }
+}
+
+elResetStaffLayoutBtn.addEventListener("click", () => {
+  staffLayout = getDefaultStaffLayout();
+  persistStaffLayout();
+  renderStaffLayoutPanel();
+  renderAllNotation();
+});
+
+function persistStaffLayout() {
+  dbSet("staffLayout", staffLayout).catch((err) => console.error("Failed to persist staff layout:", err));
+}
+
+// Re-renders every view that reads from staffLayout, after an edit/reset.
+function renderAllNotation() {
+  try { renderNotation(); } catch (err) { console.error("renderNotation() failed after staff-layout change:", err); }
+  try { renderEditor(); } catch (err) { console.error("renderEditor() failed after staff-layout change:", err); }
 }
 
 // =============================================================================
@@ -1267,11 +1558,17 @@ async function initMidi() {
 // VexFlow's tick-based layout with a second quantized voice.
 // =============================================================================
 
-// NOTEHEAD_KEY is imported from teststaff.js, which is now the single
-// source of truth for voice -> staff line-position (shared with the Test
-// staff below, per SPEC.md increment 3's instruction not to duplicate it).
+// Voice -> staff line-position now comes from stafflayout.js's map (the
+// single source of truth as of increment 4), resolved through
+// resolveNotehead(staffLayout, voice). The groove view renders the current
+// `practiceGroove` (groove.js model instance), not a fixed array.
 
-let staveNotes = [];  // one VexFlow StaveNote per groove step (index 0..7)
+// Subdivision key -> VexFlow duration code for one grid step. eighth = "8"
+// so an 8th-note grid over 4/4 has 8 steps of half-a-beat each, matching the
+// original hard-coded groove exactly.
+const NOTE_DURATION = { quarter: "q", eighth: "8", sixteenth: "16" };
+
+let staveNotes = [];  // one VexFlow tickable per absolute grid step (note or rest)
 let vexRenderer = null;
 let vexContext = null;
 let vexStave = null;
@@ -1297,20 +1594,39 @@ function renderNotation() {
     vexRenderer.resize(width, 180);
     vexContext = vexRenderer.getContext();
 
+    const ts = practiceGroove.timeSignature;
     vexStave = new VexFlow.Stave(10, 30, width - 20);
-    vexStave.addClef("percussion").setTimeSignature("4/4");
+    vexStave.addClef("percussion").setTimeSignature(`${ts.beatsPerBar}/${ts.beatValue}`);
     vexStave.setContext(vexContext).draw();
 
-    staveNotes = GROOVE.map((entry) => {
-      const keys = entry.voices.map((v) => NOTEHEAD_KEY[v]);
-      return new VexFlow.StaveNote({ keys, duration: "8", stemDirection: -1 });
-    });
+    // Build one tickable per absolute grid step so setPlayhead()/drawGhostNote()
+    // can keep addressing staveNotes[step] exactly as in inc 2/3 (unchanged for
+    // the default groove = 1 bar of 8 eighth steps). A step with voices becomes
+    // one StaveNote stacking their staff-layout keys; an empty step becomes a
+    // rest of the same duration so the bar's ticks add up for the Formatter.
+    const dur = NOTE_DURATION[practiceGroove.subdivision] || "8";
+    const total = grooveTotalSteps(practiceGroove);
+    staveNotes = [];
+    for (let step = 0; step < total; step++) {
+      const keys = grooveNotesAtPosition(practiceGroove, step)
+        .map((n) => resolveNotehead(staffLayout, n.voice))
+        .filter(Boolean);
+      staveNotes.push(
+        keys.length > 0
+          ? new VexFlow.StaveNote({ keys, duration: dur, stemDirection: -1 })
+          : new VexFlow.StaveNote({ keys: ["b/4"], duration: dur + "r" })
+      );
+    }
 
-    const voice = new VexFlow.Voice({ num_beats: 4, beat_value: 4 });
+    const voice = new VexFlow.Voice({ num_beats: ts.beatsPerBar * practiceGroove.bars, beat_value: ts.beatValue });
     voice.addTickables(staveNotes);
 
     new VexFlow.Formatter().joinVoices([voice]).formatToStave([voice], vexStave);
 
+    // Pass the full tickable list (notes + rests) so generateBeams breaks
+    // beams at rests rather than beaming across an empty step in an edited
+    // groove. (The default groove has a hi-hat on every step, so this is a
+    // no-op there — no inc-2/3 rendering change.)
     const beams = VexFlow.Beam.generateBeams(staveNotes);
 
     voice.draw(vexContext, vexStave);
@@ -1393,6 +1709,187 @@ function resetGroovePanel() {
   clearGhostNotes();
   renderNotation();
 }
+
+// =============================================================================
+// Staff-based groove editor (SPEC.md increment 4, section B)
+//
+// Renders `editorGroove` (a groove.js model instance) as VISIBLE bars laid
+// side by side — one VexFlow Stave per bar, drawn empty — with each note
+// drawn as an SVG notehead overlay via editorhit.js's drawXY() (the same
+// approach the Test staff uses: empty staves + computed-position SVG
+// noteheads, rather than fighting VexFlow's formatter for click
+// coordinates). A click is hit-tested with editorhit.js's hitTest() to the
+// nearest (voice, position) and toggled with groove.js's toggleNote(). The
+// edited groove becomes the current practice groove (section D), so the
+// "Groove" view below re-renders to match on every edit.
+//
+// All voice -> staff-row placement comes from the single `staffLayout` map,
+// so editing the Staff Layout panel moves notes here too (renderAllNotation
+// re-renders this stave alongside the groove view).
+// =============================================================================
+
+let editorStaves = [];          // one VexFlow Stave per editor bar, current render
+let editorBarGeometries = [];   // [{ noteStartX, noteEndX }] per bar, for editorhit.js
+let editorStaffGeometry = null; // { topLineY, lineSpacing } shared across bars
+let editorStepsPerBar = 0;      // grid steps per bar for the current editorGroove
+
+function renderEditor() {
+  elEditorOutput.innerHTML = "";
+  editorStaves = [];
+  editorBarGeometries = [];
+  editorStaffGeometry = null;
+
+  if (typeof VexFlow === "undefined") {
+    elEditorOutput.textContent = "Notation failed to load (VexFlow unavailable – check your connection and reload).";
+    return;
+  }
+
+  try {
+    const ts = editorGroove.timeSignature;
+    editorStepsPerBar = grooveStepsPerBar(editorGroove);
+    const barWidth = 150;
+    const staveY = 30;
+    const totalWidth = 10 + barWidth * editorGroove.bars + 10;
+
+    const renderer = new VexFlow.Renderer(elEditorOutput, VexFlow.Renderer.Backends.SVG);
+    renderer.resize(totalWidth, 170);
+    const context = renderer.getContext();
+
+    let x = 10;
+    for (let i = 0; i < editorGroove.bars; i++) {
+      const stave = new VexFlow.Stave(x, staveY, barWidth);
+      if (i === 0) stave.addClef("percussion").setTimeSignature(`${ts.beatsPerBar}/${ts.beatValue}`);
+      stave.setContext(context).draw();
+      editorStaves.push(stave);
+      editorBarGeometries.push({ noteStartX: stave.getNoteStartX(), noteEndX: stave.getNoteEndX() });
+      x += stave.getWidth();
+    }
+
+    editorStaffGeometry = {
+      topLineY: editorStaves[0].getYForLine(0),
+      lineSpacing: editorStaves[0].getYForLine(1) - editorStaves[0].getYForLine(0),
+    };
+
+    const svg = elEditorOutput.querySelector("svg");
+    if (!svg) return;
+
+    // Faint vertical grid guides at each subdivision column boundary, so the
+    // click target for each step is visible (helps the "snap to the grid"
+    // affordance the spec asks for).
+    for (let bar = 0; bar < editorBarGeometries.length; bar++) {
+      const { noteStartX, noteEndX } = editorBarGeometries[bar];
+      const colWidth = (noteEndX - noteStartX) / editorStepsPerBar;
+      for (let s = 0; s <= editorStepsPerBar; s++) {
+        const gx = noteStartX + colWidth * s;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", gx);
+        line.setAttribute("x2", gx);
+        line.setAttribute("y1", editorStaves[bar].getYForLine(0) - 8);
+        line.setAttribute("y2", editorStaves[bar].getYForLine(4) + 8);
+        line.setAttribute("stroke", s === 0 || s === editorStepsPerBar ? "#cccccc" : "#ececec");
+        line.setAttribute("stroke-width", "1");
+        svg.appendChild(line);
+      }
+    }
+
+    // Draw each note in the groove at its staff-layout position.
+    for (const note of editorGroove.notes) {
+      const xy = editorDrawXY(staffLayout, note.voice, note.position, {
+        stepsPerBar: editorStepsPerBar,
+        barGeometries: editorBarGeometries,
+        staffGeometry: editorStaffGeometry,
+      });
+      if (!xy) continue;
+      const key = resolveNotehead(staffLayout, note.voice);
+      if (!key) continue;
+      svg.appendChild(makeNoteheadEl(xy.x, xy.y, key.endsWith("/x2")));
+    }
+  } catch (err) {
+    console.error("Failed to render editor:", err);
+    elEditorOutput.textContent = "Editor failed to render.";
+  }
+}
+
+// Click-to-edit: map the click to SVG-local (x, y), hit-test to the nearest
+// (voice, position), toggle it, and make the edited groove the current
+// practice groove so the Groove view re-renders to match (section D).
+elEditorOutput.addEventListener("click", (e) => {
+  const svg = elEditorOutput.querySelector("svg");
+  if (!svg || !editorStaffGeometry || editorBarGeometries.length === 0) return;
+  const rect = svg.getBoundingClientRect();
+  const point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  const hit = editorHitTest(staffLayout, point, {
+    stepsPerBar: editorStepsPerBar,
+    barGeometries: editorBarGeometries,
+    staffGeometry: editorStaffGeometry,
+  });
+  if (!hit) return;
+  editorGroove = grooveToggleNote(editorGroove, hit.voice, hit.position);
+  practiceGroove = editorGroove;
+  renderEditor();
+  renderNotation();
+});
+
+// Set editorGroove (and the practice groove) to `next` and re-render both the
+// editor stave and the Groove view. `syncControls` also snaps the bars/
+// subdivision/time-sig selects back to the groove (used when a whole groove
+// is loaded/cleared, not when the user themselves just changed one control).
+function applyEditorGroove(next, { syncControls = false } = {}) {
+  editorGroove = next;
+  practiceGroove = next;
+  if (syncControls) syncEditorControls();
+  renderEditor();
+  renderNotation();
+}
+
+function syncEditorControls() {
+  elEditorBarsSelect.value = String(editorGroove.bars);
+  elEditorSubdivisionSelect.value = editorGroove.subdivision;
+  elEditorTimesigSelect.value = `${editorGroove.timeSignature.beatsPerBar}/${editorGroove.timeSignature.beatValue}`;
+}
+
+function populatePresetSelect() {
+  // Keep the leading placeholder option, append one per preset.
+  for (const preset of PRESETS) {
+    const opt = document.createElement("option");
+    opt.value = preset.id;
+    opt.textContent = preset.label;
+    elPresetSelect.appendChild(opt);
+  }
+}
+
+elPresetSelect.addEventListener("change", () => {
+  const preset = PRESETS.find((p) => p.id === elPresetSelect.value);
+  if (!preset) return;
+  // Deep-clone so editing the loaded groove never mutates the shared preset.
+  const clone = JSON.parse(JSON.stringify(preset.groove));
+  applyEditorGroove(clone, { syncControls: true });
+});
+
+elEditorTimesigSelect.addEventListener("change", () => {
+  const [beatsPerBar, beatValue] = elEditorTimesigSelect.value.split("/").map((n) => parseInt(n, 10));
+  applyEditorGroove(grooveSetTimeSignature(editorGroove, { beatsPerBar, beatValue }));
+});
+
+elEditorBarsSelect.addEventListener("change", () => {
+  applyEditorGroove(grooveSetBars(editorGroove, parseInt(elEditorBarsSelect.value, 10)));
+});
+
+elEditorSubdivisionSelect.addEventListener("change", () => {
+  applyEditorGroove(grooveSetSubdivision(editorGroove, elEditorSubdivisionSelect.value));
+});
+
+elEditorClearBtn.addEventListener("click", () => {
+  // Empty groove keeping the current time-sig / bars / subdivision.
+  applyEditorGroove(
+    createGroove({
+      timeSignature: editorGroove.timeSignature,
+      bars: editorGroove.bars,
+      subdivision: editorGroove.subdivision,
+    })
+  );
+  elPresetSelect.value = "";
+});
 
 // =============================================================================
 // Rolling notated Test staff (SPEC.md increment 3, section A)
@@ -1483,9 +1980,41 @@ function testStaffVoiceY(stave, key) {
   return note.getYs()[0];
 }
 
+// Builds a black SVG notehead at (x, y): an x-glyph (two crossed strokes) for
+// hats/cymbals, else a filled ellipse. Shared by the Test staff and the
+// editor stave so both draw noteheads the same way. Returns the SVG element
+// (the caller appends + tracks it).
+function makeNoteheadEl(x, y, isX) {
+  if (isX) {
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    for (const rotate of [45, -45]) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", "-4.5");
+      line.setAttribute("x2", "4.5");
+      line.setAttribute("y1", "0");
+      line.setAttribute("y2", "0");
+      line.setAttribute("stroke", "#000000");
+      line.setAttribute("stroke-width", "1.6");
+      line.setAttribute("transform", `translate(${x} ${y}) rotate(${rotate})`);
+      g.appendChild(line);
+    }
+    return g;
+  }
+  const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+  ellipse.setAttribute("cx", x);
+  ellipse.setAttribute("cy", y);
+  ellipse.setAttribute("rx", "5");
+  ellipse.setAttribute("ry", "4");
+  ellipse.setAttribute("fill", "#000000");
+  return ellipse;
+}
+
 function drawTestStaffHit(voice, gridIndex, stepsPerBeat, offsetMs) {
-  const key = resolveNotehead(voice);
-  if (!key) return; // voice has no defined staff position this increment (e.g. crash/ride/toms)
+  // resolveNotehead now takes the current staff-layout map (SPEC.md inc 4):
+  // all 10 voices resolve to a staff row, so toms/crash/floor tom/ride land
+  // in the right place here too — this is the inc-3 Test-bug fix (AC1b).
+  const key = resolveNotehead(staffLayout, voice);
+  if (!key) return; // voice has no layout entry (shouldn't happen with a valid layout)
 
   const pos = resolveStaffPosition(gridIndex, stepsPerBeat, BEATS_PER_BAR);
 
@@ -1512,31 +2041,7 @@ function drawTestStaffHit(voice, gridIndex, stepsPerBeat, offsetMs) {
   const x = baseX + xOffsetPxFromOffsetMs(offsetMs);
   const y = testStaffVoiceY(stave, key);
 
-  const isX = key.endsWith("/x2");
-  let el;
-  if (isX) {
-    // x-notehead (hi-hat): two crossed lines, matching VexFlow's own X
-    // notehead glyph closely enough to read clearly at this size.
-    el = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    for (const rotate of [45, -45]) {
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", "-4.5");
-      line.setAttribute("x2", "4.5");
-      line.setAttribute("y1", "0");
-      line.setAttribute("y2", "0");
-      line.setAttribute("stroke", "#000000");
-      line.setAttribute("stroke-width", "1.6");
-      line.setAttribute("transform", `translate(${x} ${y}) rotate(${rotate})`);
-      el.appendChild(line);
-    }
-  } else {
-    el = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-    el.setAttribute("cx", x);
-    el.setAttribute("cy", y);
-    el.setAttribute("rx", "5");
-    el.setAttribute("ry", "4");
-    el.setAttribute("fill", "#000000");
-  }
+  const el = makeNoteheadEl(x, y, key.endsWith("/x2"));
   svg.appendChild(el);
   testStaffNoteEls.push(el);
 
@@ -2006,19 +2511,26 @@ document.addEventListener("keydown", (e) => {
 
 async function boot() {
   try {
-    const [savedMap, savedInputId, savedBpm] = await Promise.all([
+    const [savedMap, savedInputId, savedBpm, savedStaffLayout] = await Promise.all([
       dbGet("noteMap"),
       dbGet("selectedInputId"),
       dbGet("bpm"),
+      dbGet("staffLayout"),
     ]);
     if (savedMap) noteMap = savedMap;
     if (savedInputId) selectedInputId = savedInputId;
     if (savedBpm) currentBpm = savedBpm;
+    // normaliseStaffLayout fills any missing/invalid voice with its shipped
+    // default, so a stale/partial saved layout can't corrupt rendering.
+    if (savedStaffLayout) staffLayout = normaliseStaffLayout(savedStaffLayout);
   } catch (err) {
     console.error("Failed to load persisted settings:", err);
   }
 
   renderMappingPanel();
+  renderStaffLayoutPanel();
+  populatePresetSelect();
+  syncEditorControls();
   // renderNotation() already catches its own errors internally (see its
   // definition), but this try/catch is a second safety net: it guarantees
   // that ANY unexpected failure here still can't stop initMidi() below from
@@ -2029,6 +2541,11 @@ async function boot() {
     renderNotation();
   } catch (err) {
     console.error("renderNotation() failed unexpectedly during boot:", err);
+  }
+  try {
+    renderEditor();
+  } catch (err) {
+    console.error("renderEditor() failed unexpectedly during boot:", err);
   }
   elBpmDisplay.textContent = String(currentBpm);
   elBpmInput.value = String(currentBpm);
