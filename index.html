@@ -370,9 +370,49 @@
     .meter-readout .dir-late  { color: var(--late); }
 
     /* ---- Notation (VexFlow) ---- */
+    /* White background behind both staves (SPEC.md increment 3, section B):
+       VexFlow's default stroke colour is black, so a plain white background
+       here is enough to make staff lines + noteheads read clearly; only the
+       inc-2 ghost-note colours (green/amber/red) need to stay legible on
+       white, which they already are (see drawGhostNote's palette). */
     #notation-panel { max-width: 620px; }
-    #notation-output { width: 100%; overflow-x: auto; }
+    #notation-output {
+      width: 100%;
+      overflow-x: auto;
+      background: #ffffff;
+      border-radius: var(--radius);
+      padding: 8px 0;
+    }
     #notation-output svg { display: block; margin: 0 auto; }
+
+    /* ---- Test staff (VexFlow, rolling/wrapping) ---- */
+    #test-staff-panel { max-width: 620px; }
+    #test-staff-output {
+      width: 100%;
+      overflow-x: auto;
+      background: #ffffff;
+      border-radius: var(--radius);
+      padding: 8px 0;
+    }
+    #test-staff-output svg { display: block; margin: 0 auto; }
+    #test-staff-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    #test-staff-clear-btn {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    #test-staff-clear-btn:hover { background: var(--border); }
 
     /* ---- Test area controls ---- */
     #testarea-controls {
@@ -552,7 +592,18 @@
       <div id="test-transport-state"></div>
     </section>
 
-    <!-- Live timing meter -->
+    <!-- Rolling notated Test staff (SPEC.md increment 3) -->
+    <section class="panel" id="test-staff-panel">
+      <h2>Test Staff</h2>
+      <div id="test-staff-output"></div>
+      <div id="test-staff-meta">
+        <span id="test-staff-page"></span>
+        <span id="test-staff-bar"></span>
+      </div>
+      <button id="test-staff-clear-btn">Clear</button>
+    </section>
+
+    <!-- Live timing meter (secondary readout — see SPEC.md increment 3 AC4) -->
     <section class="panel meter-panel" id="meter-panel-test">
       <h2>Live Timing</h2>
       <div class="meter-lane" id="meter-lane-test">
@@ -599,6 +650,14 @@ import {
   addHitToStats,
   summarizeStats,
 } from "./testarea.js";
+
+import {
+  NOTEHEAD_KEY,
+  resolveNotehead,
+  xOffsetPxFromOffsetMs,
+  VISIBLE_BARS,
+  resolveStaffPosition,
+} from "./teststaff.js";
 
 // =============================================================================
 // PracticeEngine
@@ -1009,6 +1068,11 @@ const elMeterReadoutTest = document.getElementById("meter-readout-test");
 const elTestStatsContent = document.getElementById("teststats-content");
 const elResetStatsBtn = document.getElementById("reset-stats-btn");
 
+const elTestStaffOutput = document.getElementById("test-staff-output");
+const elTestStaffPage = document.getElementById("test-staff-page");
+const elTestStaffBar = document.getElementById("test-staff-bar");
+const elTestStaffClearBtn = document.getElementById("test-staff-clear-btn");
+
 // =============================================================================
 // Note-mapping panel
 // =============================================================================
@@ -1158,7 +1222,7 @@ function handleMidiMessage(event) {
   // was struck.
   if (testEngine && testEngine.isRunning && midiToAudioOffset !== null) {
     const audioTime = (event.timeStamp - midiToAudioOffset) / 1000;
-    handleTestHit(audioTime);
+    handleTestHit(audioTime, unmapped ? null : voice);
   }
 }
 
@@ -1203,11 +1267,9 @@ async function initMidi() {
 // VexFlow's tick-based layout with a second quantized voice.
 // =============================================================================
 
-const NOTEHEAD_KEY = {
-  hihatClosed: "g/5/x2",
-  snare: "c/5",
-  kick: "f/4",
-};
+// NOTEHEAD_KEY is imported from teststaff.js, which is now the single
+// source of truth for voice -> staff line-position (shared with the Test
+// staff below, per SPEC.md increment 3's instruction not to duplicate it).
 
 let staveNotes = [];  // one VexFlow StaveNote per groove step (index 0..7)
 let vexRenderer = null;
@@ -1331,6 +1393,161 @@ function resetGroovePanel() {
   clearGhostNotes();
   renderNotation();
 }
+
+// =============================================================================
+// Rolling notated Test staff (SPEC.md increment 3, section A)
+//
+// Renders VISIBLE_BARS (teststaff.js) empty bars, side by side, on a white
+// background (see CSS). No pre-written notes — just the bar/beat grid the
+// metronome implies. Each MIDI hit while the Test transport runs draws a
+// black notehead at:
+//   - the correct staff row for its voice (teststaff.js's resolveNotehead,
+//     the SAME mapping the groove view uses)
+//   - a horizontal pixel offset from that grid step's "on-time" x position,
+//     from teststaff.js's xOffsetPxFromOffsetMs (early = left, late = right)
+//
+// Bar/beat x-positions are computed directly from each empty bar's own
+// Stave geometry (getNoteStartX()/getNoteEndX()), evenly subdividing each
+// bar's note-area width into stepsPerBar equal slots, rather than fighting
+// VexFlow's tickable/formatter system for a voice that's deliberately empty.
+//
+// Roll/scroll choice (PO call, documented in teststaff.js): WRAP. When a hit
+// crosses the last visible bar, the page counter advances and the staff
+// redraws from bar 0 again — this keeps rendering simple/deterministic
+// (fixed-width SVG, redrawn per page) while satisfying "keeps going, no
+// hard stop".
+// =============================================================================
+
+let testStaffPage = 0;       // current page rendered on screen
+let testStaves = [];         // one VexFlow Stave per visible bar, this page
+let testStaffNoteEls = [];   // SVG elements drawn on the CURRENT page (cleared on page turn / clear)
+
+function renderTestStaffPage(page) {
+  elTestStaffOutput.innerHTML = "";
+  testStaves = [];
+  testStaffNoteEls = [];
+  testStaffPage = page;
+
+  if (typeof VexFlow === "undefined") {
+    elTestStaffOutput.textContent = "Notation failed to load (VexFlow unavailable – check your connection and reload).";
+    return;
+  }
+
+  try {
+    const barWidth = 90;
+    const staveY = 30;
+    const totalWidth = 10 + barWidth * VISIBLE_BARS + 10;
+
+    const renderer = new VexFlow.Renderer(elTestStaffOutput, VexFlow.Renderer.Backends.SVG);
+    renderer.resize(totalWidth, 180);
+    const context = renderer.getContext();
+
+    let x = 10;
+    for (let i = 0; i < VISIBLE_BARS; i++) {
+      const stave = new VexFlow.Stave(x, staveY, barWidth);
+      if (i === 0) {
+        stave.addClef("percussion").setTimeSignature("4/4");
+      }
+      stave.setContext(context).draw();
+      testStaves.push(stave);
+      x += stave.getWidth();
+    }
+
+    elTestStaffPage.textContent = `Page ${page + 1}`;
+    elTestStaffBar.textContent = "";
+  } catch (err) {
+    console.error("Failed to render test staff:", err);
+    elTestStaffOutput.textContent = "Notation failed to render. MIDI input and stats still work.";
+  }
+}
+
+// x position of a given bar/step's "on-time" slot, evenly dividing that
+// bar's note-drawing area (between its clef/time-sig-adjusted start and its
+// right edge) into stepsPerBar equal columns.
+function testStaffStepX(bar, step, stepsPerBar) {
+  const stave = testStaves[bar];
+  if (!stave) return null;
+  const startX = stave.getNoteStartX();
+  const endX = stave.getNoteEndX();
+  const colWidth = (endX - startX) / stepsPerBar;
+  return startX + colWidth * step + colWidth / 2;
+}
+
+// y position for a voice, reusing the SAME percussion-clef key teststaff.js
+// (and the groove view) maps that voice to. Uses a throwaway StaveNote just
+// to ask VexFlow for the pixel y of that key on THIS stave, since Stave
+// itself only exposes y-for-line, not y-for-arbitrary-key.
+function testStaffVoiceY(stave, key) {
+  const note = new VexFlow.StaveNote({ keys: [key], duration: "q" });
+  note.setStave(stave);
+  return note.getYs()[0];
+}
+
+function drawTestStaffHit(voice, gridIndex, stepsPerBeat, offsetMs) {
+  const key = resolveNotehead(voice);
+  if (!key) return; // voice has no defined staff position this increment (e.g. crash/ride/toms)
+
+  const pos = resolveStaffPosition(gridIndex, stepsPerBeat, BEATS_PER_BAR);
+
+  // A hit that lands on a LATER page than what's currently drawn means the
+  // view has rolled past the last visible bar — advance to that page
+  // (wrap), clearing the previously drawn page's notes.
+  if (pos.page > testStaffPage) {
+    renderTestStaffPage(pos.page);
+  } else if (pos.page < testStaffPage) {
+    // A hit resolving to an earlier page than what's on screen shouldn't
+    // happen in practice (grid index only increases), but if it ever does,
+    // don't draw onto a page that's no longer visible.
+    return;
+  }
+
+  const svg = elTestStaffOutput.querySelector("svg");
+  const stave = testStaves[pos.bar];
+  if (!svg || !stave) return;
+
+  const stepsPerBar = stepsPerBeat * BEATS_PER_BAR;
+  const stepIndexInBar = pos.beat * stepsPerBeat + pos.step;
+  const baseX = testStaffStepX(pos.bar, stepIndexInBar, stepsPerBar);
+  if (baseX === null) return;
+  const x = baseX + xOffsetPxFromOffsetMs(offsetMs);
+  const y = testStaffVoiceY(stave, key);
+
+  const isX = key.endsWith("/x2");
+  let el;
+  if (isX) {
+    // x-notehead (hi-hat): two crossed lines, matching VexFlow's own X
+    // notehead glyph closely enough to read clearly at this size.
+    el = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    for (const rotate of [45, -45]) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", "-4.5");
+      line.setAttribute("x2", "4.5");
+      line.setAttribute("y1", "0");
+      line.setAttribute("y2", "0");
+      line.setAttribute("stroke", "#000000");
+      line.setAttribute("stroke-width", "1.6");
+      line.setAttribute("transform", `translate(${x} ${y}) rotate(${rotate})`);
+      el.appendChild(line);
+    }
+  } else {
+    el = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    el.setAttribute("cx", x);
+    el.setAttribute("cy", y);
+    el.setAttribute("rx", "5");
+    el.setAttribute("ry", "4");
+    el.setAttribute("fill", "#000000");
+  }
+  svg.appendChild(el);
+  testStaffNoteEls.push(el);
+
+  elTestStaffBar.textContent = `Bar ${pos.bar + 1} of ${VISIBLE_BARS}`;
+}
+
+function resetTestStaff() {
+  renderTestStaffPage(0);
+}
+
+elTestStaffClearBtn.addEventListener("click", resetTestStaff);
 
 // =============================================================================
 // Scoring a completed bar
@@ -1672,13 +1889,14 @@ function renderTestStats() {
     .join("");
 }
 
-function handleTestHit(audioTime) {
+function handleTestHit(audioTime, voice) {
   if (!testEngine) return;
-  const { offsetMs } = nearestGridLine(audioTime, testEngine.anchorTime, testEngine.bpm, testSubdivision);
+  const { gridIndex, offsetMs } = nearestGridLine(audioTime, testEngine.anchorTime, testEngine.bpm, testSubdivision);
   const { direction } = msToBand(offsetMs);
   renderMeterHit(elMeterLaneTest, elMeterReadoutTest, offsetMs, direction);
   testRunningStats = addHitToStats(testRunningStats, offsetMs);
   renderTestStats();
+  if (voice) drawTestStaffHit(voice, gridIndex, SUBDIVISIONS[testSubdivision], offsetMs);
 }
 
 function resetTestStats() {
@@ -1693,6 +1911,7 @@ function startTestTransport() {
   runToken++;
   ensureAudioContext();
   resetTestStats();
+  resetTestStaff();
 
   // Same performance.now() <-> audioCtx.currentTime reconciliation as the
   // Groove transport (see startTransport above) – one offset captured at
@@ -1819,6 +2038,11 @@ async function boot() {
   elTestBpmInput.value = String(testBpm);
   elTestTransportState.textContent = "Stopped";
   renderTestStats();
+  try {
+    resetTestStaff();
+  } catch (err) {
+    console.error("renderTestStaffPage() failed unexpectedly during boot:", err);
+  }
 
   await initMidi();
 }

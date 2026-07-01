@@ -1,141 +1,144 @@
-# Increment 2 – Real notation + readable timing feedback + Test area
+# Increment 3 – Rolling notated Test staff + white notation backgrounds
 
-**Product-owner spec.** Drum Trainer, second slice. Parent PRD:
+**Product-owner spec.** Drum Trainer, third slice. Parent PRD:
 `PRDs/2-in-progress/2026-07-01-drum-trainer.md`. Full source spec (iCloud docs):
-`projects/personal-projects/drum-trainer/increment-2-notation-timing-feedback.md`.
-This in-repo copy is the build target for `/loop`. Increment 1 is committed on
-`main` (`98d138c`).
+`projects/personal-projects/drum-trainer/increment-3-test-staff.md`. This in-repo
+copy is the build target for `/loop`. Increments 1 & 2 are committed on `main`
+(inc 2 = `7b72505`).
 
 **Runs on:** Chrome, served over HTTPS (or `http://localhost`) – Web MIDI needs a
 secure context. **Static site**, single page, no framework, no build step.
 
 ---
 
-## Why this increment (James's feedback on increment 1)
+## Why this increment (James's feedback on increment 2)
 
-1. **Feedback is unreadable while playing.** It's just red/blue/yellow symbols with
-   no legend and no sense of *where* a hit fell. James can't decode it mid-play.
-2. **Blocks, not notation.** He wants real sheet-music-style drum notation, with the
-   expected note in black and his actual hit shown as a ghosted/coloured note where
-   it landed.
+1. Make the **Test area a real, empty staff that notates each hit as it's played.**
+   As James plays, each hit is written onto the staff at the position it actually
+   landed (early = left of the subdivision line, late = right). The staff should
+   **"just keep going"** across ~8–10 bars, rolling/scrolling so there's no hard
+   stop. Colour is not required – **position carries the timing**; black noteheads
+   are fine.
+2. **Backgrounds must be white** on the groove + test staves so the black notes and
+   staff lines read clearly.
 
-Core fix: **make timing = position, not just colour**, in two complementary views,
-replace the grid with real notation, and add a dedicated **Test / free-play area**
-so he can just run the metronome and see where his hits land.
+Small, fast increment – gives James the practice/test tool he wants "for the test"
+now. (The staff-based groove editor is increment 4; app drum sounds/mixer is 5.)
 
 ---
 
 ## Scope – what's in
 
-### A. Real notation rendering (VexFlow)
-- **Engine: VexFlow** (programmatic – needed to draw live ghost notes at arbitrary
-  offsets and recolour them; PO call, reversible). Load it as a pinned static
-  library (CDN `<script>` tag or vendored file) – no build step.
-- Render a proper **5-line percussion staff** with correct drum notation:
-  **x-noteheads** for hi-hat/cymbals, **normal noteheads** for kick/snare/toms,
-  standard staff positions, stems/beams for the subdivision.
-- Re-render the **fixed 1-bar rock groove** from increment 1 (hi-hat on 8ths, kick
-  on 1 & 3, snare on 2 & 4) as real notation, **replacing the block grid entirely**.
-- **Moving playhead** sweeps the staff in time with the metronome click.
+### A. Rolling notated Test staff
+- Replace/augment the current Test area with a **real VexFlow staff**, empty to
+  start (no pre-written notes – just the subdivision grid implied by the metronome).
+- **Span ~8–10 bars** visible; as playing crosses the last visible bar, the view
+  **rolls/scrolls** (or wraps) so it keeps going – **no hard stop**. Exact bar count
+  and scroll-vs-wrap = coder's best readable choice (confirm on the mini).
+- On each MIDI hit, **write a notehead onto the staff** at the correct **voice
+  position** (kick/snare/hi-hat per the note map, using the same percussion-clef
+  line positions and x-vs-normal noteheads the groove view already uses), placed
+  **horizontally by its actual timing** relative to the nearest subdivision grid
+  line (early = left of the line, late = right). Position is the primary signal.
+- **Black / uncoloured noteheads by default.** Position carries early/late. (A
+  subtle band tint may be kept as a non-default extra, but must not be required to
+  read timing – PO call: default uncoloured black noteheads.)
+- Controls carried from inc 2, unchanged: **tempo**, **subdivision** (1/4, 1/8,
+  1/16), start/stop, count-in. The metronome click continues as the reference.
+- Keep the inc-2 **live timing meter** as a **small secondary companion readout**
+  (still shows the most-recent hit's ms/direction) – now secondary to the staff.
+- A **clear/reset** control that **wipes the staff** and starts the capture again.
+- **In-session only** – no persistence of the captured hits this round; clear just
+  empties it.
 
-### B. Readable timing feedback (BOTH views)
-- **Live timing meter** (read-while-playing view): a horizontal lane with a centre
-  **ON** zone and **EARLY** (left) / **LATE** (right) sides. Each hit appears as a
-  marker positioned by its ms offset, colour-coded, with the **numeric ms** shown.
-  Most-recent hit is prominent; glanceable at speed. Primary fix for "I can't tell
-  where things are falling."
-- **On-staff ghost notes** (study-after view): for each expected note, when James
-  hits it, draw his **actual hit as a ghosted/coloured notehead** horizontally
-  offset from the black target note (left = early, right = late), coloured by band.
-  The expected note stays **black**.
-- **Legend, always visible.** State plainly what each colour means and that
-  horizontal position = early/late. Palette = **three clear states** (below).
-
-### C. Colour + meaning (fixed, with legend)
-- **Green = on-target** (within ±30 ms).
-- **Amber = close** (30–80 ms early or late).
-- **Red = off / miss** (>80 ms or no matching hit).
-- **Direction (early vs late) is shown by position** (meter side + staff offset),
-  not by colour – colour only ever encodes *how close*, position encodes *which
-  way*. A small always-on legend explains this.
-
-### D. Test / free-play area (built first in this increment)
-- A **mode/tab** separate from groove-scoring. Metronome runs; **no prescribed
-  pattern**.
-- Controls: **tempo**, **subdivision** (1/4, 1/8, 1/16 for v1; triplets later),
-  start/stop, count-in.
-- Every hit is measured to the **nearest grid line** of the chosen subdivision and
-  shown on the **live timing meter** (early/on/late + ms). Optional light reference
-  staff/grid showing the subdivision with ghost notes at the hit positions.
-- **Running stats** (resettable): average signed offset (rush vs drag tendency),
-  % on-target, tightest/loosest hit. Simple, no persistence needed this round.
+### B. White notation backgrounds
+- The **groove view** and the **test staff** render on a **white background** with
+  **black staff lines + noteheads**. Coloured ghost/hit marks in the groove view
+  (inc-2 on-staff ghosts) still apply and must stay readable against white. The rest
+  of the app chrome can stay as it is.
 
 ---
 
 ## Out of scope (later increments)
 
-- The app's own drum **sounds** / hearing the groove played back → **increment 3**.
-  This increment stays visual + metronome click only.
-- Per-part volume mixer (increment 3).
-- Authoring/editing grooves, multiple grooves, sections (increment 4).
-- MusicXML/PDF import + Verovio display (increment 8).
-- Adjustable scoring tolerance UI (bands stay ±30/±80 ms; expose later).
-- Triplet/compound subdivisions in the Test area (v1 = 1/4, 1/8, 1/16).
+- Setting/editing what the groove is – the **staff-based editor + presets is
+  increment 4**.
+- The app's own drum **sounds** / per-part mixer (increment 5).
+- **Saving** the test capture / progress history (increment 8) – this round's
+  capture is in-session only.
+- Triplet/compound subdivisions (still 1/4, 1/8, 1/16 this round).
 
 ---
 
 ## Acceptance criteria
 
-`[auto]` = QA tests headless (keep the new maths as pure modules);
+`[auto]` = QA tests headless (keep the new maths as a pure module);
 `[human]` = James accepts on screen with the kit.
 
-1. **[human]** The fixed groove renders as **real drum notation** on a 5-line staff
-   (correct noteheads: x for hats/cymbals, normal for kick/snare/toms), not blocks,
-   with a moving playhead in time with the click.
-2. **[human]** A **live timing meter** shows each hit positioned by ms offset
-   (EARLY|ON|LATE), colour-coded green/amber/red, with the numeric ms – readable
-   while playing.
-3. **[human]** Each expected note shows the **black target** plus the
-   **ghosted/coloured actual hit** offset left (early) / right (late) on the staff.
-4. **[human]** An **always-visible legend** explains the three colours and that
-   position = early/late.
-5. **[auto + human]** A **Test / free-play area** runs the metronome with a
-   selectable subdivision (1/4, 1/8, 1/16), measures each hit to the **nearest grid
-   line**, shows it on the meter, and displays **resettable running stats** (avg
-   offset, % on-target). The nearest-grid-line selection, ms→colour band, avg signed
-   offset, and % on-target maths are a **pure module**, unit-tested headless.
-6. **[auto]** No regression to increment 1's MIDI input, mapping panel, or scoring
-   maths (existing `mapping.js` / `scoring.js` tests still pass).
-7. **[human]** Works in Chrome over HTTPS; clear message if Web MIDI is unavailable.
+1. **[human]** The Test area shows an **empty real staff** spanning ~8–10 bars on a
+   **white background** with black staff lines, before any hit is played.
+2. **[auto + human]** Starting the metronome and playing writes **each hit as a
+   notehead** at the right **voice position**, placed **horizontally by its actual
+   timing** vs the nearest subdivision line (early left / late right). The
+   hit → staff-placement maths (voice → staff row, and x-position from ms offset
+   relative to the nearest grid line) is a **pure module**, unit-tested headless.
+3. **[auto + human]** Playing past the visible bars **keeps going**
+   (rolls/scrolls/wraps) rather than stopping. The **roll/scroll boundary logic**
+   (which visible bar/column a given absolute grid index maps to, and when the view
+   advances) is part of the same **pure module**, unit-tested headless with
+   synthetic hits.
+4. **[human]** Noteheads are **black / uncoloured by default**; the inc-2 **timing
+   meter remains** as a small secondary readout.
+5. **[human]** A **clear/reset** control empties the staff.
+6. **[human]** The **groove view** also renders on a **white background** with black
+   notes/lines readable (inc-2 coloured ghost notes still legible against white).
+7. **[auto]** **No regression** to increments 1 & 2: MIDI input, mapping, scoring,
+   the Test-area timing maths, and the existing `mapping.js` / `scoring.js` /
+   `testarea.js` tests all still pass.
 
 ## PO calls (flag to change)
 
-- VexFlow (not Verovio) for the rendering engine this round.
-- Three-state colour (green/amber/red) = closeness; position = direction; legend on.
-- Test area first, then apply the same feedback views to the groove.
-- Bands unchanged (±30 / ±80 ms). No app sounds this increment.
+- Default **uncoloured** black noteheads in the test staff (position = timing).
+  Colour can be re-added as a toggle later if wanted.
+- ~8–10 bars visible, then roll/scroll; **exact bar count + scroll vs wrap = coder's
+  best readable choice**, confirmed on the mini.
+- **In-session only**; no persistence of the test capture this round.
 
 ## Notes for the coder
 
-- **Single `index.html`**, static, no build. Vanilla JS. Deploys to GitHub Pages /
-  Cloudflare Pages as-is. Load **VexFlow** from a pinned CDN URL (or vendor the file
-  in-repo) via a plain `<script>` tag – no bundler.
-- Keep the **Test-area maths as a pure module** (data in → result out, zero DOM /
-  zero Web MIDI): nearest-grid-line selection given (hitTime, tempo, subdivision,
-  bar anchor), ms→colour band (reuse the ±30/±80 thresholds from `scoring.js` –
-  don't duplicate the constants), running stats (avg signed offset, % on-target,
-  tightest/loosest). Export in a way a Node `.mjs` test can import, like the
-  existing pure modules.
-- **Reuse** the drift-free audio-clock scheduler pattern (`PracticeEngine`) for the
-  Test-area metronome and the moving playhead. Reconcile `event.timeStamp` to the
-  audio clock exactly as increment 1 does.
-- Don't regress the existing scoring/mapping pure modules or their tests.
+- **Single `index.html`**, static, no build, vanilla JS. VexFlow already loaded from
+  the pinned CDN. Reuse the existing groove-notation approach (`renderNotation()`,
+  `NOTEHEAD_KEY`, percussion clef, SVG overlays positioned by computed x) rather than
+  a new engine.
+- Keep the **new maths as a pure module** (data in → result out, zero DOM / zero Web
+  MIDI / zero AudioContext), exported so a Node `.mjs` test can import it exactly
+  like `testarea.js` / `scoring.js` / `mapping.js`:
+  - **voice → staff row/line-position** (reuse the same per-voice mapping the groove
+    uses; don't duplicate line-position constants if avoidable).
+  - **x-position from timing**: given the hit's signed ms offset from the nearest
+    subdivision grid line (reuse `nearestGridLine` / `secondsPerGridStep` from
+    `testarea.js` – don't re-derive grid maths), map to a horizontal position/offset
+    on the staff (early = left of the line, late = right). Choose a readable pixel/
+    proportional scale; document it.
+  - **roll/scroll boundary logic**: given an absolute grid index (from
+    `nearestGridLine`), the subdivision, and the visible bar count, return which
+    visible bar/column + page the hit belongs to and whether the view has advanced.
+    Deterministic and testable with synthetic hits, including the boundary where a
+    hit crosses the last visible bar.
+- **Reuse** the drift-free audio-clock scheduler (`PracticeEngine` / test transport)
+  and `nearestGridLine` – do not fork the timing model.
+- **White background**: set an explicit white fill behind the groove + test staves
+  and ensure staff lines + noteheads render black (VexFlow default stroke). Don't
+  restyle the rest of the app chrome.
+- Don't regress the existing pure modules or their `test-*.mjs` suites.
 
 ## What QA can / cannot verify
 
-- **Can (auto):** 5 (the new Test-area maths – nearest-grid selection, ms→band, avg
-  signed offset, % on-target, boundaries at exactly 30 ms and 80 ms, hits exactly
-  between two grid lines, rapid double hits), 6 (existing tests still green).
-- **Cannot – needs James + the kit on the mini:** 1, 2, 3, 4, 7 – the VexFlow
-  staff/noteheads/playhead, the live meter readability, on-staff ghost notes, the
-  legend, and the HTTPS/Web-MIDI-unavailable behaviour in a real browser.
+- **Can (auto):** 2 & 3 (the new pure module – voice→row, x-from-ms placement,
+  roll/scroll boundary with synthetic hits, including a hit exactly on a grid line,
+  a hit halfway between lines, and a hit crossing the last visible bar), 7 (existing
+  `mapping.js` / `scoring.js` / `testarea.js` tests still green).
+- **Cannot – needs James + the kit on the mini:** 1, 4, 5, 6 – the empty staff
+  render, white-background contrast/readability, black-by-default noteheads, the
+  secondary meter, the clear/reset, and the groove-view white background in a real
+  browser.
