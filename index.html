@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drum Trainer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #1a1a1a;
+      --surface: #2a2a2a;
+      --surface-2: #232323;
+      --border: #3a3a3a;
+      --accent: #f0a500;
+      --text: #e8e8e8;
+      --text-muted: #888;
+      --good: #4caf82;
+      --early: #5a8cff;
+      --late: #e08a3c;
+      --miss: #e05c5c;
+      --radius: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    h2 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .panel {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      width: 100%;
+      max-width: 620px;
+    }
+
+    /* ---- MIDI status panel ---- */
+    #midi-status {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--miss);
+      flex-shrink: 0;
+    }
+    .status-dot.connected { background: var(--good); }
+    .status-dot.warn      { background: var(--late); }
+
+    #midi-input-select {
+      font-size: 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 6px 10px;
+      outline: none;
+    }
+
+    #last-hit {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    #last-hit.unmapped { color: var(--miss); }
+
+    /* ---- Mapping panel ---- */
+    #mapping-panel .voice-row {
+      display: grid;
+      grid-template-columns: 1fr 90px 90px;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #mapping-panel .voice-row:last-child { border-bottom: none; }
+
+    .voice-name { font-size: 0.9rem; }
+
+    .voice-row input[type="number"] {
+      width: 70px;
+      text-align: center;
+      font-size: 0.95rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 6px;
+    }
+    .voice-row input[type="number"].dup-warn {
+      border-color: var(--miss);
+      color: var(--miss);
+    }
+
+    button.learn-btn {
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    button.learn-btn:hover { background: var(--border); }
+    button.learn-btn.listening {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(240, 165, 0, 0.12);
+    }
+
+    #dup-warning {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--miss);
+      display: none;
+    }
+
+    #reset-map-btn {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    #reset-map-btn:hover { background: var(--border); color: var(--text); }
+
+    /* ---- Transport ---- */
+    #transport-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      max-width: 620px;
+    }
+
+    .bpm-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bpm-display {
+      font-size: 2.4rem;
+      font-weight: 700;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    button.adj {
+      height: 36px;
+      min-width: 36px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0 12px;
+    }
+    button.adj:hover { background: var(--border); }
+
+    input[type="number"]#bpm-input {
+      width: 80px;
+      text-align: center;
+      font-size: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 6px 8px;
+    }
+
+    #transport-btn {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      font-size: 1.6rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #transport-btn.running { border-color: var(--miss); color: var(--miss); }
+
+    .hint { font-size: 0.7rem; color: var(--text-muted); }
+
+    #transport-state {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      min-height: 1.2em;
+    }
+
+    /* ---- Groove grid ---- */
+    #grid-panel { max-width: 620px; }
+
+    .grid-row {
+      display: grid;
+      grid-template-columns: 90px repeat(8, 1fr);
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .grid-row .row-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .cell {
+      height: 32px;
+      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .cell.expected { background: #444; }
+    .cell.playhead { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .cell.on-target { background: var(--good); }
+    .cell.early     { background: var(--early); }
+    .cell.late      { background: var(--late); }
+    .cell.miss      { background: var(--miss); }
+
+    /* ---- Summary ---- */
+    #summary-panel { max-width: 620px; font-size: 0.9rem; }
+    #summary-panel .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
+    #summary-panel .label { color: var(--text-muted); }
+
+  </style>
+</head>
+<body>
+
+  <h1>Drum Trainer</h1>
+
+  <!-- MIDI connection status -->
+  <section class="panel" id="midi-status">
+    <h2>MIDI Input</h2>
+    <div class="status-line">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Requesting MIDI access…</span>
+    </div>
+    <select id="midi-input-select" style="display:none"></select>
+    <div id="last-hit">Last hit: –</div>
+  </section>
+
+  <!-- Note mapping panel -->
+  <section class="panel" id="mapping-panel">
+    <h2>Note Mapping</h2>
+    <div id="voice-rows"></div>
+    <div id="dup-warning"></div>
+    <button id="reset-map-btn">Reset to GM default</button>
+  </section>
+
+  <!-- Transport -->
+  <section id="transport-controls">
+    <div class="bpm-row">
+      <button class="adj" id="bpm-down5">−5</button>
+      <button class="adj" id="bpm-down1">−1</button>
+      <div class="bpm-display" id="bpm-display">100</div>
+      <button class="adj" id="bpm-up1">+1</button>
+      <button class="adj" id="bpm-up5">+5</button>
+    </div>
+    <input type="number" id="bpm-input" min="30" max="300" value="100" />
+    <button id="transport-btn" aria-label="Start">&#x25B6;</button>
+    <span class="hint">or press Space</span>
+    <div id="transport-state"></div>
+  </section>
+
+  <!-- Groove grid -->
+  <section class="panel" id="grid-panel">
+    <h2>Groove</h2>
+    <div id="grid-rows"></div>
+  </section>
+
+  <!-- Summary -->
+  <section class="panel" id="summary-panel">
+    <h2>Scoring</h2>
+    <div id="summary-content"></div>
+  </section>
+
+<script type="module">
+"use strict";
+
+import {
+  VOICES,
+  VOICE_LABELS,
+  getDefaultMap,
+  findDuplicates,
+  classifyHit,
+} from "./mapping.js";
+
+import {
+  scoreAgainstConsumed,
+  summarize,
+  WINDOW_MS,
+} from "./scoring.js";
+
+// =============================================================================
+// PracticeEngine
+//
+// Pure scheduling module for the practice loop. Mirrors the metronome's
+// MetronomeEngine drift-free design: every event's scheduled time is
+// startTime + beatIndex * secondsPerBeat, anchored once at start() with no
+// beat-to-beat accumulation.
+//
+// Adds a fixed 1-bar groove on top of the click:
+//   hi-hat closed on all 8 eighth-notes
+//   kick on beats 1 & 3 (eighth-note positions 0 and 4)
+//   snare on beats 2 & 4 (eighth-note positions 2 and 6)
+// Plus a 1-bar count-in (clicks only, no groove notes expected) before the
+// groove starts looping.
+//
+// AudioContext is injected via the constructor so this class can be driven
+// by a mock in unit tests without opening a browser.
+// =============================================================================
+
+const GROOVE = [
+  { step: 0, voices: ["kick", "hihatClosed"] },
+  { step: 1, voices: ["hihatClosed"] },
+  { step: 2, voices: ["snare", "hihatClosed"] },
+  { step: 3, voices: ["hihatClosed"] },
+  { step: 4, voices: ["kick", "hihatClosed"] },
+  { step: 5, voices: ["hihatClosed"] },
+  { step: 6, voices: ["snare", "hihatClosed"] },
+  { step: 7, voices: ["hihatClosed"] },
+];
+
+const STEPS_PER_BAR = 8; // 8th-note grid over 4/4
+const BEATS_PER_BAR = 4;
+
+class PracticeEngine {
+  static BPM_MIN = 30;
+  static BPM_MAX = 300;
+
+  #ctx;
+  #lookahead;
+  #tickInterval;
+  #onStep;     // fn(barStep, scheduledTime, isAccent, isCountIn)
+  #onExpectedHit; // fn({voice, time, barIndex, step})
+
+  #running = false;
+  #tickerId = null;
+  #startTime = 0;   // AudioContext time of step 0 of the count-in bar
+  #nextStep = 0;     // monotonically increasing 8th-note step counter (count-in + groove)
+
+  #bpm = 100;
+
+  #log = [];
+  static #LOG_LIMIT = 10_000;
+
+  constructor({ audioContext, lookahead = 0.1, tickInterval = 25, onStep, onExpectedHit } = {}) {
+    if (!audioContext) throw new Error("PracticeEngine: audioContext is required");
+    this.#ctx = audioContext;
+    this.#lookahead = lookahead;
+    this.#tickInterval = tickInterval;
+    this.#onStep = typeof onStep === "function" ? onStep : () => {};
+    this.#onExpectedHit = typeof onExpectedHit === "function" ? onExpectedHit : () => {};
+  }
+
+  get isRunning() { return this.#running; }
+  get bpm() { return this.#bpm; }
+
+  setBpm(raw) {
+    const v = clamp(Math.round(Number(raw)), PracticeEngine.BPM_MIN, PracticeEngine.BPM_MAX);
+    this.#bpm = v;
+    return v;
+  }
+
+  start() {
+    if (this.#running) return;
+    this.#running = true;
+    this.#nextStep = 0;
+    this.#log = [];
+    this.#startTime = this.#ctx.currentTime + 0.05;
+    this.#tick();
+    this.#tickerId = setInterval(() => this.#tick(), this.#tickInterval);
+  }
+
+  stop() {
+    if (!this.#running) return;
+    this.#running = false;
+    clearInterval(this.#tickerId);
+    this.#tickerId = null;
+  }
+
+  getScheduledSteps() {
+    return this.#log.slice();
+  }
+
+  // seconds per 8th-note step at current bpm (quarter note = 60/bpm; 8th = half that)
+  #secondsPerStep() {
+    return (60 / this.#bpm) / 2;
+  }
+
+  #tick() {
+    if (!this.#running) return;
+    const horizon = this.#ctx.currentTime + this.#lookahead;
+    const secondsPerStep = this.#secondsPerStep();
+
+    while (true) {
+      const scheduledTime = this.#startTime + this.#nextStep * secondsPerStep;
+      if (scheduledTime > horizon) break;
+
+      // First STEPS_PER_BAR steps = count-in (click only). Steps after that
+      // are the looping groove bar (stepIndex 0 = bar 2's first step).
+      const isCountIn = this.#nextStep < STEPS_PER_BAR;
+      const grooveStepIndex = isCountIn ? null : (this.#nextStep - STEPS_PER_BAR) % STEPS_PER_BAR;
+      const barStep = isCountIn ? this.#nextStep % STEPS_PER_BAR : grooveStepIndex;
+      const isAccent = barStep === 0;
+      // barIndex: which loop pass we're on (0 = count-in, 1 = first groove bar, ...)
+      const barIndex = isCountIn ? 0 : Math.floor((this.#nextStep - STEPS_PER_BAR) / STEPS_PER_BAR) + 1;
+
+      this.#onStep(barStep, scheduledTime, isAccent, isCountIn, barIndex);
+
+      if (!isCountIn) {
+        const grooveEntry = GROOVE[grooveStepIndex];
+        for (const voice of grooveEntry.voices) {
+          this.#onExpectedHit({ voice, time: scheduledTime, barIndex, step: grooveStepIndex });
+        }
+      }
+
+      if (this.#log.length < PracticeEngine.#LOG_LIMIT) {
+        this.#log.push({ step: this.#nextStep, barStep, time: scheduledTime, isAccent, isCountIn, barIndex });
+      }
+
+      this.#nextStep++;
+    }
+  }
+}
+
+function clamp(v, min, max) {
+  return Math.min(max, Math.max(min, v));
+}
+
+// Expose for potential future headless testing / debugging via console.
+window.PracticeEngine = PracticeEngine;
+window.GROOVE = GROOVE;
+
+// =============================================================================
+// Click synthesis – same approach as the metronome: oscillator + short
+// exponential-decay gain envelope, no external assets. Accent = higher pitch.
+// =============================================================================
+
+function playClick(ctx, time, isAccent) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = "sine";
+  osc.frequency.value = isAccent ? 1200 : 800;
+  gain.gain.setValueAtTime(0.0001, time);
+  gain.gain.exponentialRampToValueAtTime(0.7, time + 0.002);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.06);
+  osc.start(time);
+  osc.stop(time + 0.08);
+}
+
+// =============================================================================
+// IndexedDB persistence
+//
+// Single object store "settings" keyed by name, storing: noteMap, inputId,
+// bpm. Simple get/set wrapper – no transactions spanning multiple keys.
+// =============================================================================
+
+const DB_NAME = "drum-trainer";
+const DB_VERSION = 1;
+const STORE = "settings";
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbGet(key) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbSet(key, value) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// =============================================================================
+// App state
+// =============================================================================
+
+let noteMap = getDefaultMap();
+let selectedInputId = null;
+let currentBpm = 100;
+let midiAccess = null;
+let midiInputs = [];
+let activeInput = null;
+let learningVoice = null; // voice currently in "Learn" capture mode, or null
+
+let audioCtx = null;
+let engine = null;
+let midiToAudioOffset = null; // performance.now() -> audioCtx.currentTime offset, captured at start()
+let runToken = 0; // bumped on every startTransport(); guards the stopTransport() grace-period timeout
+                   // against firing against a DIFFERENT run if start/stop/start happens quickly
+
+// Live per-loop expected/actual hit tracking for scoring.
+let expectedHits = [];   // [{voice, time, barIndex, step}] scheduled so far, this run
+let actualHits = [];     // [{voice, time}] audio-clock-domain hits captured, this run (stable order/index for this run)
+let scoredBarIndexes = new Set(); // bar indexes already scored (avoid re-scoring)
+// Indices into actualHits already matched by a previous scoreBar() call.
+// Passed to scoreAgainstConsumed() so a single physical hit that falls in
+// the overlap between two adjacent bars' +-80ms judging windows (this
+// happens whenever the 8th-note interval is shorter than 80ms, i.e. BPM
+// above ~187.5) can only ever be matched by ONE bar, not double-counted.
+let consumedActualIndices = new Set();
+let runningTally = { "on-target": 0, early: 0, late: 0, miss: 0, extra: 0 };
+let cellState = {}; // "barStep-voice" -> classification, for current bar's grid colouring
+
+// =============================================================================
+// DOM references
+// =============================================================================
+
+const elStatusDot = document.getElementById("status-dot");
+const elStatusText = document.getElementById("status-text");
+const elInputSelect = document.getElementById("midi-input-select");
+const elLastHit = document.getElementById("last-hit");
+
+const elVoiceRows = document.getElementById("voice-rows");
+const elDupWarning = document.getElementById("dup-warning");
+const elResetMapBtn = document.getElementById("reset-map-btn");
+
+const elBpmDisplay = document.getElementById("bpm-display");
+const elBpmInput = document.getElementById("bpm-input");
+const elBpmDown5 = document.getElementById("bpm-down5");
+const elBpmDown1 = document.getElementById("bpm-down1");
+const elBpmUp1 = document.getElementById("bpm-up1");
+const elBpmUp5 = document.getElementById("bpm-up5");
+const elTransportBtn = document.getElementById("transport-btn");
+const elTransportState = document.getElementById("transport-state");
+
+const elGridRows = document.getElementById("grid-rows");
+const elSummaryContent = document.getElementById("summary-content");
+
+// =============================================================================
+// Note-mapping panel
+// =============================================================================
+
+function renderMappingPanel() {
+  elVoiceRows.innerHTML = "";
+  for (const voice of VOICES) {
+    const row = document.createElement("div");
+    row.className = "voice-row";
+
+    const name = document.createElement("span");
+    name.className = "voice-name";
+    name.textContent = VOICE_LABELS[voice];
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.max = "127";
+    input.value = noteMap[voice] ?? "";
+    input.dataset.voice = voice;
+    input.addEventListener("change", () => {
+      const v = parseInt(input.value, 10);
+      noteMap[voice] = Number.isFinite(v) ? v : null;
+      persistMap();
+      renderMappingPanel();
+    });
+
+    const learnBtn = document.createElement("button");
+    learnBtn.className = "learn-btn";
+    learnBtn.textContent = learningVoice === voice ? "Listening…" : "Learn";
+    if (learningVoice === voice) learnBtn.classList.add("listening");
+    learnBtn.addEventListener("click", () => {
+      learningVoice = learningVoice === voice ? null : voice;
+      renderMappingPanel();
+    });
+
+    row.append(name, input, learnBtn);
+    elVoiceRows.appendChild(row);
+  }
+
+  const dupes = findDuplicates(noteMap);
+  if (dupes.length > 0) {
+    const msg = dupes
+      .map((d) => `note ${d.note} is mapped to both ${d.voices.map((v) => VOICE_LABELS[v]).join(" and ")}`)
+      .join("; ");
+    elDupWarning.textContent = "Warning: " + msg + ".";
+    elDupWarning.style.display = "block";
+    const dupNotes = new Set(dupes.map((d) => d.note));
+    for (const input of elVoiceRows.querySelectorAll("input[type=number]")) {
+      const v = parseInt(input.value, 10);
+      if (dupNotes.has(v)) input.classList.add("dup-warn");
+    }
+  } else {
+    elDupWarning.style.display = "none";
+  }
+}
+
+elResetMapBtn.addEventListener("click", () => {
+  noteMap = getDefaultMap();
+  persistMap();
+  renderMappingPanel();
+});
+
+function persistMap() {
+  dbSet("noteMap", noteMap).catch((err) => console.error("Failed to persist note map:", err));
+}
+
+// =============================================================================
+// Web MIDI
+// =============================================================================
+
+function setStatus(text, cls) {
+  elStatusText.textContent = text;
+  elStatusDot.className = "status-dot" + (cls ? " " + cls : "");
+}
+
+function populateInputList() {
+  elInputSelect.innerHTML = "";
+  midiInputs = Array.from(midiAccess.inputs.values());
+
+  if (midiInputs.length === 0) {
+    setStatus("No MIDI inputs found.", "");
+    elInputSelect.style.display = "none";
+    activeInput = null;
+    return;
+  }
+
+  elInputSelect.style.display = "inline-block";
+  for (const input of midiInputs) {
+    const opt = document.createElement("option");
+    opt.value = input.id;
+    opt.textContent = input.name || input.id;
+    elInputSelect.appendChild(opt);
+  }
+
+  // Prefer remembered last-used input if still present, else first input.
+  const preferred = midiInputs.find((i) => i.id === selectedInputId) || midiInputs[0];
+  elInputSelect.value = preferred.id;
+  connectInput(preferred);
+}
+
+function connectInput(input) {
+  if (activeInput) activeInput.onmidimessage = null;
+  activeInput = input;
+  selectedInputId = input.id;
+  dbSet("selectedInputId", selectedInputId).catch((err) => console.error("Failed to persist input:", err));
+  activeInput.onmidimessage = handleMidiMessage;
+  setStatus("Connected: " + (input.name || input.id), "connected");
+}
+
+elInputSelect.addEventListener("change", () => {
+  const input = midiInputs.find((i) => i.id === elInputSelect.value);
+  if (input) connectInput(input);
+});
+
+function handleMidiMessage(event) {
+  const [status, note, velocity] = event.data;
+  const command = status & 0xf0;
+  // Note-On with velocity 0 is treated as Note-Off per MIDI convention.
+  if (command !== 0x90 || velocity === 0) return;
+
+  // Learn mode: capture this note for the voice being learned.
+  if (learningVoice) {
+    noteMap[learningVoice] = note;
+    learningVoice = null;
+    persistMap();
+    renderMappingPanel();
+  }
+
+  const { voice, unmapped } = classifyHit(noteMap, note);
+  elLastHit.textContent = `Last hit: note ${note}, velocity ${velocity}` + (unmapped ? " (unmapped)" : ` → ${VOICE_LABELS[voice]}`);
+  elLastHit.classList.toggle("unmapped", unmapped);
+
+  // Feed the practice engine's scoring if a loop is running. Reconcile the
+  // MIDI timestamp (performance.now() domain) to the audio-clock domain
+  // using the offset captured once at transport start (see startTransport).
+  // Unmapped hits are still recorded (voice: null) so they surface as
+  // "extra" hits in the scoring summary rather than being silently dropped.
+  if (engine && engine.isRunning && midiToAudioOffset !== null) {
+    const audioTime = (event.timeStamp - midiToAudioOffset) / 1000;
+    actualHits.push({ voice: unmapped ? null : voice, time: audioTime });
+  }
+}
+
+function onMidiStateChange() {
+  populateInputList();
+}
+
+async function initMidi() {
+  if (!navigator.requestMIDIAccess) {
+    setStatus("Web MIDI is not available in this browser (try Chrome over HTTPS or localhost).", "");
+    return;
+  }
+  try {
+    midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+    midiAccess.onstatechange = onMidiStateChange;
+    populateInputList();
+  } catch (err) {
+    setStatus("MIDI permission denied: " + err.message, "");
+  }
+}
+
+// =============================================================================
+// Groove grid rendering
+// =============================================================================
+
+// Active voices in the fixed groove, in display order (top to bottom).
+const GRID_VOICES = ["hihatClosed", "snare", "kick"];
+
+function buildGrid() {
+  elGridRows.innerHTML = "";
+  cellState = {};
+  for (const voice of GRID_VOICES) {
+    const row = document.createElement("div");
+    row.className = "grid-row";
+
+    const label = document.createElement("span");
+    label.className = "row-label";
+    label.textContent = VOICE_LABELS[voice];
+    row.appendChild(label);
+
+    for (let step = 0; step < STEPS_PER_BAR; step++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.voice = voice;
+      cell.dataset.step = String(step);
+      const hasHit = GROOVE[step].voices.includes(voice);
+      if (hasHit) cell.classList.add("expected");
+      row.appendChild(cell);
+    }
+    elGridRows.appendChild(row);
+  }
+}
+
+function clearPlayhead() {
+  for (const cell of elGridRows.querySelectorAll(".cell.playhead")) {
+    cell.classList.remove("playhead");
+  }
+}
+
+function setPlayhead(step) {
+  clearPlayhead();
+  if (step === null) return;
+  for (const cell of elGridRows.querySelectorAll(`.cell[data-step="${step}"]`)) {
+    cell.classList.add("playhead");
+  }
+}
+
+function colourCell(voice, step, classification) {
+  const cell = elGridRows.querySelector(`.cell[data-voice="${voice}"][data-step="${step}"]`);
+  if (!cell) return;
+  cell.classList.remove("on-target", "early", "late", "miss");
+  cell.classList.add(classification);
+}
+
+function resetCellColours() {
+  for (const cell of elGridRows.querySelectorAll(".cell")) {
+    cell.classList.remove("on-target", "early", "late", "miss");
+  }
+}
+
+// =============================================================================
+// Scoring a completed bar
+//
+// Called once a groove bar's judging window (last expected hit + 80ms) has
+// passed, so all actual hits that could match are already captured.
+//
+// Ownership partition (fixes both matched-hit AND extra-hit double-counting):
+// each bar owns a CONTIGUOUS, NON-OVERLAPPING span of time, split from its
+// neighbours at the midpoint between this bar's boundary step and the
+// neighbouring bar's boundary step. A plain +/-80ms pad around each bar
+// (the previous approach) overlaps the neighbour's pad whenever the 8th-note
+// interval is under 160ms (BPM > ~187.5), which let a stray/wrong-voice/
+// unmapped hit in that overlap be offered as a candidate to BOTH bars and
+// counted as an "extra" twice. Splitting at the midpoint means every actual
+// hit is a candidate for exactly one bar's scoreAgainstConsumed() call, so
+// it can end up matched OR extra AT MOST ONCE across the whole run – never
+// both, never twice. (scoreAgainstConsumed's consumedIndices Set is still
+// threaded through as a second safety net for the matched case, but with a
+// clean partition it's no longer load-bearing for the extras case.)
+// =============================================================================
+
+function scoreBar(barIndex) {
+  const barExpected = expectedHits.filter((h) => h.barIndex === barIndex);
+  if (barExpected.length === 0) return;
+
+  const times = barExpected.map((h) => h.time);
+  const barFirst = Math.min(...times);
+  const barLast = Math.max(...times);
+
+  // Find this bar's immediate neighbours (by expected time) to compute the
+  // midpoint boundaries. expectedHits accumulates for the whole run, so the
+  // next bar's first step is already present by the time a bar is scored
+  // (scoreBar(N) runs once bar N+1's step 0 has been scheduled).
+  const prevBarTimes = expectedHits.filter((h) => h.barIndex === barIndex - 1).map((h) => h.time);
+  const nextBarTimes = expectedHits.filter((h) => h.barIndex === barIndex + 1).map((h) => h.time);
+
+  // Fall back to the fixed 80ms pad only at a run's first/last bar, where
+  // there is no neighbour to split a midpoint with.
+  const winStart = prevBarTimes.length > 0 ? (Math.max(...prevBarTimes) + barFirst) / 2 : barFirst - 0.08;
+  const winEnd = nextBarTimes.length > 0 ? (barLast + Math.min(...nextBarTimes)) / 2 : barLast + 0.08;
+  const windowFilter = (hit) => hit.time >= winStart && hit.time < winEnd;
+
+  const { results, extras, consumedIndices } = scoreAgainstConsumed(
+    barExpected,
+    actualHits,
+    consumedActualIndices,
+    windowFilter
+  );
+  consumedActualIndices = consumedIndices;
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    const exp = barExpected[i];
+    colourCell(exp.voice, exp.step, r.classification);
+    runningTally[r.classification]++;
+  }
+  runningTally.extra += extras.length;
+
+  const summary = summarize(results, extras);
+  renderSummary(summary);
+}
+
+function renderSummary(lastBarSummary) {
+  const totalExpected = runningTally["on-target"] + runningTally.early + runningTally.late + runningTally.miss;
+  const runningAccuracy = totalExpected > 0 ? ((runningTally["on-target"] / totalExpected) * 100).toFixed(1) : "0.0";
+
+  const rows = [
+    ["Last bar – on-target", lastBarSummary.counts["on-target"]],
+    ["Last bar – early", lastBarSummary.counts.early],
+    ["Last bar – late", lastBarSummary.counts.late],
+    ["Last bar – miss", lastBarSummary.counts.miss],
+    ["Last bar – extra", lastBarSummary.counts.extra],
+    ["Last bar – accuracy", lastBarSummary.accuracyPct.toFixed(1) + "%"],
+    ["Last bar – avg offset (ms)", lastBarSummary.avgOffsetMs !== null ? lastBarSummary.avgOffsetMs.toFixed(1) : "–"],
+    ["Running – on-target", runningTally["on-target"]],
+    ["Running – early", runningTally.early],
+    ["Running – late", runningTally.late],
+    ["Running – miss", runningTally.miss],
+    ["Running – extra", runningTally.extra],
+    ["Running – accuracy", runningAccuracy + "%"],
+  ];
+
+  elSummaryContent.innerHTML = rows
+    .map(([label, val]) => `<div class="summary-row"><span class="label">${label}</span><span>${val}</span></div>`)
+    .join("");
+}
+
+function resetScoringState() {
+  expectedHits = [];
+  actualHits = [];
+  scoredBarIndexes = new Set();
+  consumedActualIndices = new Set();
+  runningTally = { "on-target": 0, early: 0, late: 0, miss: 0, extra: 0 };
+  resetCellColours();
+  elSummaryContent.innerHTML = "";
+}
+
+// =============================================================================
+// Transport
+// =============================================================================
+
+function applyBpm(v) {
+  // Guard blank/whitespace BEFORE coercion: Number("") and Number("  ") are
+  // 0, not NaN, so Number.isFinite alone would let a blank input through
+  // and clamp() would floor it to 30 instead of leaving the BPM unchanged.
+  const s = String(v).trim();
+  const n = s === "" ? NaN : Number(s);
+  // Fall back to the current BPM on any invalid input (blank or non-numeric),
+  // same pattern as the note-map input handler.
+  currentBpm = Number.isFinite(n) ? clamp(Math.round(n), 30, 300) : currentBpm;
+  elBpmDisplay.textContent = String(currentBpm);
+  elBpmInput.value = String(currentBpm);
+  if (engine) engine.setBpm(currentBpm);
+  dbSet("bpm", currentBpm).catch((err) => console.error("Failed to persist bpm:", err));
+}
+
+elBpmDown5.addEventListener("click", () => applyBpm(currentBpm - 5));
+elBpmDown1.addEventListener("click", () => applyBpm(currentBpm - 1));
+elBpmUp1.addEventListener("click", () => applyBpm(currentBpm + 1));
+elBpmUp5.addEventListener("click", () => applyBpm(currentBpm + 5));
+elBpmInput.addEventListener("change", () => applyBpm(elBpmInput.value));
+
+function ensureAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function startTransport() {
+  runToken++;
+  ensureAudioContext();
+  resetScoringState();
+
+  // Capture the offset between performance.now() and audioCtx.currentTime
+  // ONCE at start, so incoming MIDI event.timeStamp values (performance.now()
+  // domain) can be converted to the audio-clock domain for scoring:
+  //   audioTime = (event.timeStamp - offset) / 1000
+  // where offset = performance.now() - audioCtx.currentTime*1000, sampled at
+  // the same instant. Both clocks tick at the same rate (real elapsed time),
+  // so a single offset capture is enough to keep them in sync.
+  midiToAudioOffset = performance.now() - audioCtx.currentTime * 1000;
+
+  engine = new PracticeEngine({
+    audioContext: audioCtx,
+    onStep: (barStep, scheduledTime, isAccent, isCountIn, barIndex) => {
+      playClick(audioCtx, scheduledTime, isAccent);
+      const delay = Math.max(0, (scheduledTime - audioCtx.currentTime) * 1000);
+      setTimeout(() => {
+        elTransportState.textContent = isCountIn ? `Count-in… beat ${barStep + 1}` : "Playing";
+        setPlayhead(isCountIn ? null : barStep);
+        // Score the PREVIOUS groove bar once we've moved past its judging
+        // window (this bar's step 0 means the previous bar's last expected
+        // hit + 80ms window has definitely elapsed).
+        if (!isCountIn && barStep === 0 && barIndex > 1 && !scoredBarIndexes.has(barIndex - 1)) {
+          scoredBarIndexes.add(barIndex - 1);
+          scoreBar(barIndex - 1);
+        }
+      }, delay);
+    },
+    onExpectedHit: (hit) => {
+      expectedHits.push(hit);
+    },
+  });
+  engine.setBpm(currentBpm);
+  engine.start();
+
+  elTransportBtn.classList.add("running");
+  elTransportBtn.setAttribute("aria-label", "Stop");
+  elTransportBtn.innerHTML = "&#x25A0;";
+  elTransportState.textContent = "Count-in…";
+}
+
+function stopTransport() {
+  if (engine) {
+    // Stop the click/scheduler immediately so Stop feels responsive.
+    engine.stop();
+    engine = null;
+
+    // The final bar's last expected hit may still be within its 80ms
+    // judging window – score it only after that window has actually
+    // elapsed, so a genuinely-late hit that hasn't arrived yet isn't
+    // wrongly scored as a miss. MIDI capture (handleMidiMessage) stays
+    // live during this grace period since midiToAudioOffset isn't cleared
+    // until after scoring runs. Guarded by runToken in case the user hits
+    // Start again before the grace period elapses – if a new run has
+    // started, this stale callback is a no-op (the new run's own scoring
+    // takes over).
+    const lastBar = expectedHits.length > 0 ? expectedHits[expectedHits.length - 1].barIndex : null;
+    const tokenAtStop = runToken;
+    if (lastBar !== null && !scoredBarIndexes.has(lastBar)) {
+      scoredBarIndexes.add(lastBar);
+      setTimeout(() => {
+        if (runToken !== tokenAtStop) return; // superseded by a new run
+        scoreBar(lastBar);
+        midiToAudioOffset = null;
+      }, WINDOW_MS);
+    } else {
+      midiToAudioOffset = null;
+    }
+  } else {
+    midiToAudioOffset = null;
+  }
+  clearPlayhead();
+  elTransportBtn.classList.remove("running");
+  elTransportBtn.setAttribute("aria-label", "Start");
+  elTransportBtn.innerHTML = "&#x25B6;";
+  elTransportState.textContent = "Stopped";
+}
+
+function toggleTransport() {
+  if (engine && engine.isRunning) {
+    stopTransport();
+  } else {
+    startTransport();
+  }
+}
+
+elTransportBtn.addEventListener("click", toggleTransport);
+
+document.addEventListener("keydown", (e) => {
+  if (e.code !== "Space") return;
+  const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return;
+  e.preventDefault();
+  toggleTransport();
+});
+
+// =============================================================================
+// Boot
+// =============================================================================
+
+async function boot() {
+  try {
+    const [savedMap, savedInputId, savedBpm] = await Promise.all([
+      dbGet("noteMap"),
+      dbGet("selectedInputId"),
+      dbGet("bpm"),
+    ]);
+    if (savedMap) noteMap = savedMap;
+    if (savedInputId) selectedInputId = savedInputId;
+    if (savedBpm) currentBpm = savedBpm;
+  } catch (err) {
+    console.error("Failed to load persisted settings:", err);
+  }
+
+  renderMappingPanel();
+  buildGrid();
+  elBpmDisplay.textContent = String(currentBpm);
+  elBpmInput.value = String(currentBpm);
+  elTransportState.textContent = "Stopped";
+
+  await initMidi();
+}
+
+boot();
+</script>
+</body>
+</html>
