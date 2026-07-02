@@ -24,7 +24,7 @@ import {
 // AC2 — mapping defaults
 // -----------------------------------------------------------------------------
 
-test("AC2: VOICES lists exactly the 10 spec'd voices in order", () => {
+test("AC2: VOICES lists exactly the 12 spec'd voices in order (increment 5 adds crash2 + rideBell)", () => {
   assert.deepEqual(VOICES, [
     "kick",
     "snare",
@@ -35,7 +35,9 @@ test("AC2: VOICES lists exactly the 10 spec'd voices in order", () => {
     "tom2",
     "floorTom",
     "crash",
+    "crash2",
     "ride",
+    "rideBell",
   ]);
 });
 
@@ -57,7 +59,9 @@ test("AC2: GM_DEFAULT_MAP matches the exact spec'd note numbers", () => {
     tom2: 45,
     floorTom: 43,
     crash: 49,
+    crash2: 57,
     ride: 51,
+    rideBell: 53,
   });
 });
 
@@ -139,7 +143,9 @@ test("AC4: a mapped note resolves to the correct voice", () => {
   assert.equal(resolveVoice(map, 45), "tom2");
   assert.equal(resolveVoice(map, 43), "floorTom");
   assert.equal(resolveVoice(map, 49), "crash");
+  assert.equal(resolveVoice(map, 57), "crash2");
   assert.equal(resolveVoice(map, 51), "ride");
+  assert.equal(resolveVoice(map, 53), "rideBell");
 });
 
 test("AC4: an unmapped note number resolves to null", () => {

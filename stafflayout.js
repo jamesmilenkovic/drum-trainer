@@ -3,17 +3,23 @@
 // =============================================================================
 // stafflayout.js
 //
-// The staff-layout (notation display) map (SPEC.md increment 4, section A2).
-// Maps each of the 10 voices in mapping.js's VOICES to where it sits on a
-// percussion-clef staff: a VexFlow key string (line/space position) and a
-// notehead type. This is the SINGLE SOURCE OF TRUTH for voice -> staff
-// position — the groove view, the staff editor, and the Test staff all read
-// from the same map instead of each keeping their own copy.
+// The staff-layout (notation display) map (SPEC.md increment 4, section A2;
+// extended increment 5, sections A-C). Maps each voice in mapping.js's
+// VOICES to where it sits on a percussion-clef staff: a VexFlow key string
+// (line/space position) and a notehead type. This is the SINGLE SOURCE OF
+// TRUTH for voice -> staff position AND for notehead glyph codes — the
+// groove view, the staff editor, and the Test staff all read from the same
+// map/resolver instead of each keeping their own copy.
 //
 // Inc 1 gave the INPUT map (MIDI note -> voice, mapping.js). This is the
 // missing DISPLAY map (voice -> staff position + notehead) — james reported
 // (2026-07-01) that without it, the inc-3 Test staff had no defined place
 // for toms/crash/floor tom/ride to render, so they landed in the wrong spot.
+//
+// Increment 5 (2026-07-02, James's inc-4 feedback) extends the notehead
+// model beyond normal/x to normal/x/open/diamond (+circled-x as a cheap
+// optional extra), and adds two more voices (crash2, rideBell). See
+// NOTEHEAD_GLYPHS below for the single glyph table.
 //
 // Pure module: zero DOM, zero Web MIDI, zero AudioContext references, so it
 // can be unit-tested headless with `node --test`, exactly like mapping.js /
@@ -73,31 +79,102 @@ import { VOICES } from "./mapping.js";
 //                             staff (conventional "cymbals live above the
 //                             staff" territory) but each keeps its own row.
 //
+// Increment 5 additions (SPEC.md section C — new voices; reference
+// "researched 2026-07-02, standard drum key" in SPEC.md's intro):
+//   crash2      -> "d/6"     x notehead, one step above ride — a second
+//                             crash cymbal conventionally sits with the
+//                             other cymbals above the staff; its own row
+//                             keeps it click-reachable (see the "one row per
+//                             voice" note below).
+//   rideBell    -> "e/6"     diamond notehead, one step above crash2 — per
+//                             SPEC.md, ride bell is conventionally notated
+//                             on the SAME line as ride (bell vs bow
+//                             distinguished only by the diamond notehead).
+//                             This increment keeps one-row-per-voice (see
+//                             the note below), so rideBell gets the nearest
+//                             free adjacent row above the other cymbals
+//                             instead of literally sharing ride's "c/6" —
+//                             still grouped with ride, still a diamond, just
+//                             click-reachable on its own row.
+//
+// ---- One row per voice vs shared positions (SPEC.md's flagged PO call) ----
+// SPEC.md floats sharing exact staff positions (open/closed hi-hat on one
+// line, ride/ride-bell on one line) via a voice-picker so the editor places
+// notes for whichever voice is currently selected, rather than inferring
+// voice from the row clicked. This increment keeps the INC-4 APPROACH
+// instead (one row per voice, coder's call per SPEC.md's explicit fallback
+// option): editorhit.js's hitTest()/its round-trip tests, and this file's
+// "no two voices share a key" invariant, are both built around distinct
+// rows, and reworking them into a voice-picker + shared-row hit-test is a
+// bigger change than this increment's noteheads-and-new-voices scope —
+// flagged for the PO as a candidate for a later increment if James wants
+// literal shared lines rather than adjacent rows.
+//
 // All of this is EDITABLE via the settings panel (SPEC.md A2) and persisted
 // to IndexedDB — these are only the shipped defaults.
 export const DEFAULT_STAFF_LAYOUT = Object.freeze({
   kick: Object.freeze({ key: "f/4", notehead: "normal" }),
   snare: Object.freeze({ key: "c/5", notehead: "normal" }),
   hihatClosed: Object.freeze({ key: "g/5", notehead: "x" }),
-  hihatOpen: Object.freeze({ key: "a/5", notehead: "x" }),
+  hihatOpen: Object.freeze({ key: "a/5", notehead: "open" }),
   hihatPedal: Object.freeze({ key: "d/4", notehead: "x" }),
   tom1: Object.freeze({ key: "e/5", notehead: "normal" }),
   tom2: Object.freeze({ key: "a/4", notehead: "normal" }),
   floorTom: Object.freeze({ key: "f/3", notehead: "normal" }),
   crash: Object.freeze({ key: "b/5", notehead: "x" }),
+  crash2: Object.freeze({ key: "d/6", notehead: "x" }),
   ride: Object.freeze({ key: "c/6", notehead: "x" }),
+  rideBell: Object.freeze({ key: "e/6", notehead: "diamond" }),
 });
 
-// The x-notehead VexFlow key-string suffix used elsewhere in this app
-// (renderNotation()'s NOTEHEAD_KEY/GROOVE rendering, teststaff.js). A key
-// string built as `${key}/x2` renders VexFlow's solid-black X notehead.
-const X_SUFFIX = "/x2";
+// ---- Notehead glyph table (SPEC.md increment 5, section B) — the SINGLE
+// SOURCE OF TRUTH for notehead glyph codes. Every caller that needs to know
+// how a notehead type renders (the VexFlow key-string suffix for the Groove
+// view's real StaveNotes, AND the hand-drawn-SVG "kind" the editor/Test
+// staff use for their own overlay noteheads) reads it from here — nothing
+// else in the app hard-codes a glyph suffix or shape.
+//
+// vexSuffix: appended to a plain key string (e.g. "c/5") to build the full
+//   VexFlow key VexFlow's StaveNote understands. null = no suffix (VexFlow's
+//   plain filled notehead). Codes are VexFlow's own notehead-code table
+//   (Tables.codeNoteHead): x2 = filled X, d2 = filled diamond, x3 = filled
+//   circle-X.
+// drawKind: what the editor/Test staff's hand-drawn SVG overlay (index.html's
+//   makeNoteheadEl) should draw for this notehead, since those two views
+//   don't use VexFlow's tickable StaveNote rendering at all (see
+//   editorhit.js's header comment) — "normal" (filled ellipse), "x" (crossed
+//   strokes), or "diamond" (filled diamond). "open" reuses the "x" SVG shape
+//   plus an extra small circle drawn above it (circleAbove: true) — there is
+//   no single glyph for "open hi-hat" in VexFlow OR in the hand-drawn
+//   overlay, per SPEC.md section B's explicit instruction to layer an "o"
+//   above an x notehead instead.
+// circleAbove: true only for "open" — tells both the VexFlow renderer (an
+//   Annotation glyph above the StaveNote) and the SVG overlay (an extra
+//   small ring) to draw the small "o" that distinguishes open from closed.
+export const NOTEHEAD_GLYPHS = Object.freeze({
+  normal: Object.freeze({ vexSuffix: null, drawKind: "normal", circleAbove: false }),
+  x: Object.freeze({ vexSuffix: "/x2", drawKind: "x", circleAbove: false }),
+  open: Object.freeze({ vexSuffix: "/x2", drawKind: "x", circleAbove: true }),
+  diamond: Object.freeze({ vexSuffix: "/d2", drawKind: "diamond", circleAbove: false }),
+  // Optional/nice-to-have per SPEC.md section B — cheap since VexFlow
+  // already has a circle-X notehead code (x3) and the SVG overlay can draw
+  // an x inside a ring the same way "open" draws one above.
+  "circled-x": Object.freeze({ vexSuffix: "/x3", drawKind: "x", circleAbove: false, circleAround: true }),
+});
 
-// Build the full VexFlow key string (including the /x2 suffix for x
-// noteheads) for a voice's entry in a layout map.
+// Ordered list of valid notehead type keys — drives the glyph dropdown in
+// the settings panel (SPEC.md AC1's "glyph dropdown showing the actual
+// shapes") and the validation guard below, so the UI never has to hard-code
+// a second copy of "which noteheads exist".
+export const NOTEHEAD_TYPES = Object.freeze(Object.keys(NOTEHEAD_GLYPHS));
+
+// Build the full VexFlow key string (including any glyph suffix) for a
+// voice's entry in a layout map.
 function vexKeyFor(entry) {
   if (!entry) return null;
-  return entry.notehead === "x" ? `${entry.key}${X_SUFFIX}` : entry.key;
+  const glyph = NOTEHEAD_GLYPHS[entry.notehead];
+  if (!glyph) return null;
+  return glyph.vexSuffix ? `${entry.key}${glyph.vexSuffix}` : entry.key;
 }
 
 // Returns a fresh, independent copy of the default staff layout (mirrors
@@ -118,7 +195,15 @@ function isPlausibleKey(key) {
 }
 
 function isValidNotehead(notehead) {
-  return notehead === "normal" || notehead === "x";
+  return Object.prototype.hasOwnProperty.call(NOTEHEAD_GLYPHS, notehead);
+}
+
+// Given a notehead type, return its glyph metadata ({ vexSuffix, drawKind,
+// circleAbove }), or null for an unknown type. The single lookup point for
+// any caller (UI glyph dropdown, SVG overlay drawing) that needs to know how
+// a notehead renders without duplicating the table above.
+export function getNoteheadGlyph(notehead) {
+  return NOTEHEAD_GLYPHS[notehead] ? { ...NOTEHEAD_GLYPHS[notehead] } : null;
 }
 
 // Validate a single voice's layout entry.
@@ -127,11 +212,12 @@ function isValidEntry(entry) {
 }
 
 // Given a layout map and a voice, return that voice's VexFlow key string
-// (with the /x2 suffix already applied for x noteheads) or null if the
-// voice has no entry. Mirrors teststaff.js's original resolveNotehead(voice)
-// call shape, but now takes the layout explicitly so an EDITED (not just
-// default) layout can be resolved against — pass DEFAULT_STAFF_LAYOUT (or
-// getDefaultStaffLayout()) for the shipped defaults.
+// (with its notehead's glyph suffix, if any, already applied — see
+// NOTEHEAD_GLYPHS above) or null if the voice has no entry. Mirrors
+// teststaff.js's original resolveNotehead(voice) call shape, but now takes
+// the layout explicitly so an EDITED (not just default) layout can be
+// resolved against — pass DEFAULT_STAFF_LAYOUT (or getDefaultStaffLayout())
+// for the shipped defaults.
 export function resolveNotehead(layout, voice) {
   return vexKeyFor(layout?.[voice]);
 }

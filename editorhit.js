@@ -81,6 +81,41 @@ export function voiceRowY(layout, voice, geometry) {
   return geometry.topLineY - (step - TOP_LINE_KEY_STEP) * halfSpacing;
 }
 
+// Build a "<letter>/<octave>" key string back from a diatonic step integer —
+// the inverse of diatonicStep(). Used by keyForY below (SPEC.md increment 5
+// section A's visual staff-layout picker: click a line/space, get back a key
+// string to save, without ever showing that string to the user).
+const STEP_LETTER = Object.fromEntries(Object.entries(LETTER_STEP).map(([letter, step]) => [step, letter]));
+
+function keyForDiatonicStep(step) {
+  const octave = Math.floor(step / 7);
+  const letter = STEP_LETTER[((step % 7) + 7) % 7];
+  return `${letter}/${octave}`;
+}
+
+// ---- Pixel y -> nearest staff key string (the staff-layout picker) ----
+//
+// geometry: same { topLineY, lineSpacing } shape as voiceRowY. clampSteps:
+// how many diatonic steps above the top line / below the bottom line a
+// click is still allowed to snap to (default 8 — enough ledger-line room
+// for every voice in the shipped default layout, above (rideBell/crash2)
+// and below (floorTom), plus a little slack for a custom layout that pushes
+// a voice slightly further, without letting a wild click miles off-canvas
+// produce a silly key many ledger lines away).
+//
+// Returns the nearest "<letter>/<octave>" key string for a click at pixel
+// y — the reverse of voiceRowY, used by the staff-layout panel's visual
+// picker (click a line/space -> save that position for the voice being
+// edited) instead of asking the user to type a raw key string.
+export function keyForY(y, geometry, clampSteps = 8) {
+  const halfSpacing = geometry.lineSpacing / 2;
+  const rawStep = TOP_LINE_KEY_STEP - Math.round((y - geometry.topLineY) / halfSpacing);
+  const minStep = TOP_LINE_KEY_STEP - 8 - clampSteps; // bottom line (f/4) minus headroom
+  const maxStep = TOP_LINE_KEY_STEP + clampSteps;
+  const clamped = Math.min(maxStep, Math.max(minStep, rawStep));
+  return keyForDiatonicStep(clamped);
+}
+
 // ---- Position <-> x (pixel column) ----
 //
 // geometry additionally carries: noteStartX/noteEndX (a single bar's

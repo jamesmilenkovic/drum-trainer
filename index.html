@@ -60,6 +60,32 @@
       max-width: 620px;
     }
 
+    /* ---- Collapsible panel headers (SPEC.md increment 5, section D) ----
+       Applied to the Note Mapping and Staff Layout panel headers only — the
+       h2 becomes a clickable row with a chevron, and the panel's own body
+       (everything after the header) is hidden via the .collapsed class on
+       the panel's <section>, toggled by JS + remembered in IndexedDB. */
+    .panel.collapsible h2 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 12px;
+    }
+    .panel.collapsible.collapsed h2 { margin-bottom: 0; }
+    .panel.collapsible .collapse-chevron {
+      font-size: 0.7rem;
+      transition: transform 0.15s ease;
+    }
+    .panel.collapsible.collapsed .collapse-chevron { transform: rotate(-90deg); }
+    .panel.collapsible .panel-body {
+      display: block;
+    }
+    .panel.collapsible.collapsed .panel-body {
+      display: none;
+    }
+
     /* ---- MIDI status panel ---- */
     #midi-status {
       display: flex;
@@ -165,37 +191,80 @@
     }
     #reset-map-btn:hover { background: var(--border); color: var(--text); }
 
-    /* ---- Staff-layout panel (mirrors the mapping panel above) ---- */
+    /* ---- Staff-layout panel (SPEC.md increment 5, section A: human-
+       friendly position + notehead controls, no raw key strings) ---- */
     #stafflayout-panel .voice-row {
       display: grid;
-      grid-template-columns: 1fr 90px 100px;
+      grid-template-columns: 1fr auto auto;
       align-items: center;
       gap: 10px;
       padding: 6px 0;
       border-bottom: 1px solid var(--border);
     }
     #stafflayout-panel .voice-row:last-child { border-bottom: none; }
-    #stafflayout-panel .voice-row input[type="text"] {
-      width: 70px;
-      text-align: center;
-      font-size: 0.9rem;
+
+    /* "Position" button: shows the voice's CURRENT spot in plain English
+       (e.g. "Top space"), opens the visual picker for that voice when
+       clicked — never shows the raw VexFlow key string (AC1). */
+    button.position-btn {
+      font-size: 0.8rem;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       color: var(--text);
-      padding: 5px 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      white-space: nowrap;
     }
-    #stafflayout-panel .voice-row input[type="text"].key-invalid {
-      border-color: var(--miss);
-      color: var(--miss);
+    button.position-btn:hover { background: var(--border); }
+    button.position-btn.picking {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(240, 165, 0, 0.12);
     }
-    #stafflayout-panel .voice-row select {
+
+    /* Notehead glyph select + its live preview swatch (AC1: "show the
+       shape", not just the word). */
+    .notehead-field {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .notehead-field select {
       font-size: 0.85rem;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       color: var(--text);
       padding: 5px 6px;
+    }
+    .notehead-preview {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      background: #ffffff;
+      border-radius: 4px;
+    }
+
+    /* The visual picker: a single small percussion staff the user clicks a
+       line/space on to set the currently-picked voice's position. Rendered
+       inline below whichever voice-row's "Position" button was clicked;
+       only one open at a time (SPEC.md "keep it minimal"). */
+    #stafflayout-picker {
+      display: none;
+      margin: 4px 0 10px;
+      background: #ffffff;
+      border-radius: var(--radius);
+      padding: 8px 0;
+      cursor: pointer;
+    }
+    #stafflayout-picker.open { display: block; }
+    #stafflayout-picker svg { display: block; margin: 0 auto; }
+    #stafflayout-picker-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 4px;
     }
     #reset-stafflayout-btn {
       margin-top: 12px;
@@ -588,21 +657,33 @@
     <div id="last-hit">Last hit: –</div>
   </section>
 
-  <!-- Note mapping panel -->
-  <section class="panel" id="mapping-panel">
-    <h2>Note Mapping</h2>
-    <div id="voice-rows"></div>
-    <div id="dup-warning"></div>
-    <button id="reset-map-btn">Reset to GM default</button>
+  <!-- Note mapping panel — collapsible (SPEC.md increment 5, section D):
+       default collapsed once the user has a saved map, remembered in
+       IndexedDB (see boot()/toggleCollapsible()). -->
+  <section class="panel collapsible" id="mapping-panel">
+    <h2 id="mapping-panel-header"><span>Note Mapping</span><span class="collapse-chevron">&#x25BC;</span></h2>
+    <div class="panel-body">
+      <div id="voice-rows"></div>
+      <div id="dup-warning"></div>
+      <button id="reset-map-btn">Reset to GM default</button>
+    </div>
   </section>
 
   <!-- Staff-layout (notation display) panel (SPEC.md increment 4, section
-       A2) — mirrors the Note Mapping panel above, but edits voice -> staff
-       position/notehead instead of voice -> MIDI note. -->
-  <section class="panel" id="stafflayout-panel">
-    <h2>Staff Layout</h2>
-    <div id="stafflayout-rows"></div>
-    <button id="reset-stafflayout-btn">Reset to default layout</button>
+       A2; extended increment 5, section A) — mirrors the Note Mapping panel
+       above, but edits voice -> staff position/notehead instead of voice ->
+       MIDI note. Position is set via a visual staff picker (click a
+       line/space), not a raw key string (AC1). Collapsible per section D. -->
+  <section class="panel collapsible" id="stafflayout-panel">
+    <h2 id="stafflayout-panel-header"><span>Staff Layout</span><span class="collapse-chevron">&#x25BC;</span></h2>
+    <div class="panel-body">
+      <div id="stafflayout-rows"></div>
+      <div id="stafflayout-picker">
+        <div id="stafflayout-picker-output"></div>
+        <div id="stafflayout-picker-hint">Click a line or space to set the position.</div>
+      </div>
+      <button id="reset-stafflayout-btn">Reset to default layout</button>
+    </div>
   </section>
 
   <!-- Legend: always visible in both modes, per SPEC.md section B/C -->
@@ -800,11 +881,17 @@ import {
 
 // resolveNotehead is now re-exported from stafflayout.js (SPEC.md increment
 // 4) — imported directly from there since index.html needs the OTHER
-// stafflayout.js exports (default layout, normalisation) anyway.
+// stafflayout.js exports (default layout, normalisation) anyway. Increment 5
+// adds NOTEHEAD_TYPES/getNoteheadGlyph (the glyph dropdown + preview) and
+// POSITION_PRESETS (the named-position fallback list, unused when the
+// visual picker renders, but kept as the human-readable label source for
+// the "Position" button's text either way).
 import {
   getDefaultStaffLayout,
   normaliseStaffLayout,
   resolveNotehead,
+  NOTEHEAD_TYPES,
+  getNoteheadGlyph,
 } from "./stafflayout.js";
 
 import {
@@ -819,7 +906,7 @@ import {
   notesAtPosition as grooveNotesAtPosition,
 } from "./groove.js";
 
-import { hitTest as editorHitTest, drawXY as editorDrawXY } from "./editorhit.js";
+import { hitTest as editorHitTest, drawXY as editorDrawXY, keyForY, voiceRowY } from "./editorhit.js";
 
 import { PRESETS } from "./presets.js";
 
@@ -1232,9 +1319,15 @@ const elLastHit = document.getElementById("last-hit");
 const elVoiceRows = document.getElementById("voice-rows");
 const elDupWarning = document.getElementById("dup-warning");
 const elResetMapBtn = document.getElementById("reset-map-btn");
+const elMappingPanel = document.getElementById("mapping-panel");
+const elMappingPanelHeader = document.getElementById("mapping-panel-header");
 
 const elStaffLayoutRows = document.getElementById("stafflayout-rows");
 const elResetStaffLayoutBtn = document.getElementById("reset-stafflayout-btn");
+const elStaffLayoutPanel = document.getElementById("stafflayout-panel");
+const elStaffLayoutPanelHeader = document.getElementById("stafflayout-panel-header");
+const elStaffLayoutPicker = document.getElementById("stafflayout-picker");
+const elStaffLayoutPickerOutput = document.getElementById("stafflayout-picker-output");
 
 const elPresetSelect = document.getElementById("preset-select");
 const elEditorTimesigSelect = document.getElementById("editor-timesig-select");
@@ -1341,6 +1434,29 @@ function renderMappingPanel() {
   }
 }
 
+// =============================================================================
+// Collapsible panels (SPEC.md increment 5, section D) — Note Mapping and
+// Staff Layout. Generic toggle shared by both: the .collapsible panel's own
+// "collapsed" class is what CSS hides the .panel-body on; state is
+// persisted to the existing IndexedDB settings store (dbGet/dbSet) so it
+// survives a reload.
+// =============================================================================
+
+function setPanelCollapsed(panelEl, collapsed) {
+  panelEl.classList.toggle("collapsed", collapsed);
+}
+
+function wireCollapsible(panelEl, headerEl, dbKey) {
+  headerEl.addEventListener("click", () => {
+    const collapsed = !panelEl.classList.contains("collapsed");
+    setPanelCollapsed(panelEl, collapsed);
+    dbSet(dbKey, collapsed).catch((err) => console.error(`Failed to persist ${dbKey}:`, err));
+  });
+}
+
+wireCollapsible(elMappingPanel, elMappingPanelHeader, "mappingPanelCollapsed");
+wireCollapsible(elStaffLayoutPanel, elStaffLayoutPanelHeader, "staffLayoutPanelCollapsed");
+
 elResetMapBtn.addEventListener("click", () => {
   noteMap = getDefaultMap();
   persistMap();
@@ -1359,14 +1475,131 @@ function persistMap() {
 // since they all read from the single `staffLayout` variable.
 // =============================================================================
 
-// A key string is only accepted (and persisted) if it still parses as a
-// plausible VexFlow line/space key (letter a-g + "/" + integer octave) —
-// same permissive check stafflayout.js's normaliseStaffLayout uses, kept in
-// sync so a value good enough to save is also good enough to survive a
-// reload. An invalid in-progress edit is visibly flagged (key-invalid) but
-// NOT written into staffLayout/persisted until it's valid again.
-function isPlausibleKeyInput(key) {
-  return /^[a-g]\/\d+$/.test(key.trim());
+// Human-readable label for a raw key string, e.g. "g/5" -> "Top space"
+// (SPEC.md AC1: no raw key strings anywhere in the UI). Built from the same
+// percussion-clef line/space convention stafflayout.js's header comment
+// documents (lines bottom-to-top F4/A4/C5/E5/G5, spaces bottom-to-top
+// G4/B4/D5/F5) plus "above"/"below" for anything off the 5-line staff.
+const STAFF_LINES = ["f/4", "a/4", "c/5", "e/5", "g/5"]; // bottom -> top
+const STAFF_SPACES = ["g/4", "b/4", "d/5", "f/5"]; // bottom -> top, between the 5 lines
+const LINE_NAMES = ["Bottom line", "2nd line", "Middle line", "4th line", "Top line"];
+const SPACE_NAMES = ["Bottom space", "2nd space", "3rd space", "Top space"];
+
+function positionLabel(key) {
+  const lineIdx = STAFF_LINES.indexOf(key);
+  if (lineIdx !== -1) return LINE_NAMES[lineIdx];
+  const spaceIdx = STAFF_SPACES.indexOf(key);
+  if (spaceIdx !== -1) return SPACE_NAMES[spaceIdx];
+  // Off the 5-line staff: describe as N steps above/below, in plain English
+  // rather than the raw key string.
+  return offStaffLabel(key);
+}
+
+// Fallback label for a key above/below the drawn 5-line staff (ledger-line
+// territory: floorTom below, crash/crash2/ride/rideBell above). Counts
+// diatonic steps from the nearest staff edge using the same letter-order
+// this app's percussion clef follows, and reports "N line(s)/space(s)
+// above/below the staff" in plain English.
+const LETTER_ORDER = ["c", "d", "e", "f", "g", "a", "b"];
+function keyStep(key) {
+  const [letter, octave] = key.split("/");
+  return LETTER_ORDER.indexOf(letter) + Number(octave) * 7;
+}
+function offStaffLabel(key) {
+  const step = keyStep(key);
+  const topStep = keyStep("g/5");
+  const bottomStep = keyStep("f/4");
+  if (step > topStep) {
+    const n = step - topStep;
+    return `${n} ${n === 1 ? "step" : "steps"} above the staff`;
+  }
+  if (step < bottomStep) {
+    const n = bottomStep - step;
+    return `${n} ${n === 1 ? "step" : "steps"} below the staff`;
+  }
+  return "On the staff"; // defensive fallback; shouldn't hit for a valid key not in STAFF_LINES/SPACES
+}
+
+function persistStaffLayout() {
+  dbSet("staffLayout", staffLayout).catch((err) => console.error("Failed to persist staff layout:", err));
+}
+
+// ---- Visual staff-layout picker (SPEC.md increment 5, section A) ----
+//
+// One small staff, click a line/space to set the CURRENTLY-PICKED voice's
+// position — opened by a voice row's "Position" button, one at a time (see
+// the "one row per voice" decision documented in stafflayout.js). Draws the
+// voice's own notehead live at wherever the pointer/last click landed, so
+// the picker doubles as a live preview, matching the inc-4 click-to-place
+// editor paradigm James already likes.
+let pickerVoice = null; // voice currently being positioned, or null if closed
+let pickerStave = null;
+let pickerGeometry = null; // { topLineY, lineSpacing } off the rendered mini stave
+
+function renderStaffLayoutPicker() {
+  elStaffLayoutPickerOutput.innerHTML = "";
+  pickerStave = null;
+  pickerGeometry = null;
+  if (!pickerVoice || typeof VexFlow === "undefined") return;
+
+  const width = 160;
+  const renderer = new VexFlow.Renderer(elStaffLayoutPickerOutput, VexFlow.Renderer.Backends.SVG);
+  renderer.resize(width, 130);
+  const context = renderer.getContext();
+
+  pickerStave = new VexFlow.Stave(10, 55, width - 20);
+  pickerStave.setContext(context).draw();
+  pickerGeometry = {
+    topLineY: pickerStave.getYForLine(0),
+    lineSpacing: pickerStave.getYForLine(1) - pickerStave.getYForLine(0),
+  };
+
+  drawPickerNotehead();
+}
+
+// Draws the picked voice's notehead at its CURRENT staffLayout position on
+// the picker stave — live feedback, per SPEC.md "draws the voice's notehead
+// there live".
+function drawPickerNotehead() {
+  if (!pickerVoice || !pickerStave || !pickerGeometry) return;
+  const svg = elStaffLayoutPickerOutput.querySelector("svg");
+  if (!svg) return;
+  svg.querySelectorAll(".picker-notehead").forEach((el) => el.remove());
+  const entry = staffLayout[pickerVoice];
+  const y = voiceRowYForPicker(entry.key);
+  const x = (pickerStave.getNoteStartX() + pickerStave.getNoteEndX()) / 2;
+  const el = makeNoteheadEl(x, y, entry.notehead);
+  el.classList.add("picker-notehead");
+  svg.appendChild(el);
+}
+
+// voiceRowY (editorhit.js) takes a layout + voice; the picker only has a
+// bare key string mid-edit (before it's saved into staffLayout), so this
+// wraps it in a throwaway single-voice layout to reuse the same maths
+// rather than re-deriving it.
+function voiceRowYForPicker(key) {
+  return voiceRowY({ _picker: { key, notehead: "normal" } }, "_picker", pickerGeometry);
+}
+
+elStaffLayoutPickerOutput.addEventListener("click", (e) => {
+  if (!pickerVoice || !pickerGeometry) return;
+  const svg = elStaffLayoutPickerOutput.querySelector("svg");
+  if (!svg) return;
+  const rect = svg.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const key = keyForY(y, pickerGeometry);
+  staffLayout = { ...staffLayout, [pickerVoice]: { ...staffLayout[pickerVoice], key } };
+  persistStaffLayout();
+  drawPickerNotehead();
+  renderStaffLayoutPanel();
+  renderAllNotation();
+});
+
+function openPicker(voice) {
+  pickerVoice = pickerVoice === voice ? null : voice; // click the same row's button again to close
+  elStaffLayoutPicker.classList.toggle("open", pickerVoice !== null);
+  renderStaffLayoutPicker();
+  renderStaffLayoutPanel();
 }
 
 function renderStaffLayoutPanel() {
@@ -1379,51 +1612,75 @@ function renderStaffLayoutPanel() {
     name.className = "voice-name";
     name.textContent = VOICE_LABELS[voice];
 
-    const keyInput = document.createElement("input");
-    keyInput.type = "text";
-    keyInput.value = staffLayout[voice].key;
-    keyInput.dataset.voice = voice;
-    keyInput.addEventListener("change", () => {
-      const raw = keyInput.value.trim();
-      if (!isPlausibleKeyInput(raw)) {
-        keyInput.classList.add("key-invalid");
-        return;
-      }
-      keyInput.classList.remove("key-invalid");
-      staffLayout = { ...staffLayout, [voice]: { ...staffLayout[voice], key: raw } };
-      persistStaffLayout();
-      renderAllNotation();
-    });
+    // Position button — shows the CURRENT position in plain English (never
+    // the raw key string, AC1) and opens the visual picker for this voice.
+    const posBtn = document.createElement("button");
+    posBtn.className = "position-btn";
+    posBtn.type = "button";
+    posBtn.textContent = positionLabel(staffLayout[voice].key);
+    if (pickerVoice === voice) posBtn.classList.add("picking");
+    posBtn.addEventListener("click", () => openPicker(voice));
+
+    // Notehead glyph select + a live preview swatch showing the actual shape.
+    const noteheadField = document.createElement("div");
+    noteheadField.className = "notehead-field";
 
     const noteheadSelect = document.createElement("select");
-    for (const [value, label] of [["normal", "Normal"], ["x", "X"]]) {
+    for (const type of NOTEHEAD_TYPES) {
       const opt = document.createElement("option");
-      opt.value = value;
-      opt.textContent = label;
-      if (staffLayout[voice].notehead === value) opt.selected = true;
+      opt.value = type;
+      opt.textContent = NOTEHEAD_LABELS[type] || type;
+      if (staffLayout[voice].notehead === type) opt.selected = true;
       noteheadSelect.appendChild(opt);
     }
+
+    const preview = makeNoteheadPreview(staffLayout[voice].notehead);
+
     noteheadSelect.addEventListener("change", () => {
       staffLayout = { ...staffLayout, [voice]: { ...staffLayout[voice], notehead: noteheadSelect.value } };
       persistStaffLayout();
       renderAllNotation();
+      renderStaffLayoutPanel();
+      if (pickerVoice === voice) drawPickerNotehead();
     });
 
-    row.append(name, keyInput, noteheadSelect);
+    noteheadField.append(noteheadSelect, preview);
+    row.append(name, posBtn, noteheadField);
     elStaffLayoutRows.appendChild(row);
   }
 }
 
+// Human-readable notehead labels (AC1: the dropdown shows the shape, so the
+// text label just needs to name it — the preview swatch beside it shows the
+// actual glyph).
+const NOTEHEAD_LABELS = {
+  normal: "Normal",
+  x: "X",
+  open: "Open (○ above X)",
+  diamond: "Diamond",
+  "circled-x": "Circled X",
+};
+
+// Builds a small standalone SVG showing a notehead's actual shape, for the
+// glyph dropdown's live preview swatch (AC1: "show the shape").
+function makeNoteheadPreview(notehead) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", "22");
+  svg.setAttribute("height", "22");
+  svg.setAttribute("viewBox", "0 0 22 22");
+  svg.classList.add("notehead-preview");
+  svg.appendChild(makeNoteheadEl(11, 13, notehead));
+  return svg;
+}
+
 elResetStaffLayoutBtn.addEventListener("click", () => {
   staffLayout = getDefaultStaffLayout();
+  pickerVoice = null;
+  elStaffLayoutPicker.classList.remove("open");
   persistStaffLayout();
   renderStaffLayoutPanel();
   renderAllNotation();
 });
-
-function persistStaffLayout() {
-  dbSet("staffLayout", staffLayout).catch((err) => console.error("Failed to persist staff layout:", err));
-}
 
 // Re-renders every view that reads from staffLayout, after an edit/reset.
 function renderAllNotation() {
@@ -1608,14 +1865,27 @@ function renderNotation() {
     const total = grooveTotalSteps(practiceGroove);
     staveNotes = [];
     for (let step = 0; step < total; step++) {
-      const keys = grooveNotesAtPosition(practiceGroove, step)
-        .map((n) => resolveNotehead(staffLayout, n.voice))
-        .filter(Boolean);
-      staveNotes.push(
+      const notesHere = grooveNotesAtPosition(practiceGroove, step)
+        .map((n) => ({ voice: n.voice, key: resolveNotehead(staffLayout, n.voice), entry: staffLayout[n.voice] }))
+        .filter((n) => n.key);
+      const keys = notesHere.map((n) => n.key);
+      const staveNote =
         keys.length > 0
           ? new VexFlow.StaveNote({ keys, duration: dur, stemDirection: -1 })
-          : new VexFlow.StaveNote({ keys: ["b/4"], duration: dur + "r" })
-      );
+          : new VexFlow.StaveNote({ keys: ["b/4"], duration: dur + "r" });
+
+      // "open" noteheads (SPEC.md section B) get a small "o" annotation
+      // above their own notehead within the chord — VexFlow has no single
+      // built-in glyph for "open hi-hat", so this layers a text annotation
+      // on top of the x notehead, per the spec's explicit instruction.
+      notesHere.forEach((n, i) => {
+        if (getNoteheadGlyph(n.entry?.notehead)?.circleAbove) {
+          const annotation = new VexFlow.Annotation("o").setFont("Georgia", 10, "normal");
+          staveNote.addModifier(annotation, i);
+        }
+      });
+
+      staveNotes.push(staveNote);
     }
 
     const voice = new VexFlow.Voice({ num_beats: ts.beatsPerBar * practiceGroove.bars, beat_value: ts.beatValue });
@@ -1800,9 +2070,9 @@ function renderEditor() {
         staffGeometry: editorStaffGeometry,
       });
       if (!xy) continue;
-      const key = resolveNotehead(staffLayout, note.voice);
-      if (!key) continue;
-      svg.appendChild(makeNoteheadEl(xy.x, xy.y, key.endsWith("/x2")));
+      const entry = staffLayout[note.voice];
+      if (!entry) continue;
+      svg.appendChild(makeNoteheadEl(xy.x, xy.y, entry.notehead));
     }
   } catch (err) {
     console.error("Failed to render editor:", err);
@@ -1980,13 +2250,18 @@ function testStaffVoiceY(stave, key) {
   return note.getYs()[0];
 }
 
-// Builds a black SVG notehead at (x, y): an x-glyph (two crossed strokes) for
-// hats/cymbals, else a filled ellipse. Shared by the Test staff and the
-// editor stave so both draw noteheads the same way. Returns the SVG element
+// Builds a black SVG notehead at (x, y) for the given notehead TYPE (one of
+// stafflayout.js's NOTEHEAD_TYPES: normal/x/open/diamond/circled-x). Shared
+// by the Test staff, the editor stave, and the staff-layout picker/preview
+// swatches so all four draw noteheads the same way, reading shape from
+// stafflayout.js's NOTEHEAD_GLYPHS (SPEC.md increment 5, section B: one
+// glyph table, not scattered per-view drawing logic). Returns an SVG <g>
 // (the caller appends + tracks it).
-function makeNoteheadEl(x, y, isX) {
-  if (isX) {
-    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+function makeNoteheadEl(x, y, notehead) {
+  const glyph = getNoteheadGlyph(notehead) || getNoteheadGlyph("normal");
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+  if (glyph.drawKind === "x") {
     for (const rotate of [45, -45]) {
       const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("x1", "-4.5");
@@ -1998,23 +2273,59 @@ function makeNoteheadEl(x, y, isX) {
       line.setAttribute("transform", `translate(${x} ${y}) rotate(${rotate})`);
       g.appendChild(line);
     }
-    return g;
+  } else if (glyph.drawKind === "diamond") {
+    const diamond = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    diamond.setAttribute("points", `${x},${y - 5.5} ${x + 5},${y} ${x},${y + 5.5} ${x - 5},${y}`);
+    diamond.setAttribute("fill", "#000000");
+    g.appendChild(diamond);
+  } else {
+    const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    ellipse.setAttribute("cx", x);
+    ellipse.setAttribute("cy", y);
+    ellipse.setAttribute("rx", "5");
+    ellipse.setAttribute("ry", "4");
+    ellipse.setAttribute("fill", "#000000");
+    g.appendChild(ellipse);
   }
-  const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-  ellipse.setAttribute("cx", x);
-  ellipse.setAttribute("cy", y);
-  ellipse.setAttribute("rx", "5");
-  ellipse.setAttribute("ry", "4");
-  ellipse.setAttribute("fill", "#000000");
-  return ellipse;
+
+  // "open" (hi-hat): a small hollow ring above the notehead — the "o"
+  // articulation SPEC.md section B calls for, since there's no single
+  // VexFlow/SVG glyph for "open hi-hat".
+  if (glyph.circleAbove) {
+    const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    ring.setAttribute("cx", x);
+    ring.setAttribute("cy", y - 11);
+    ring.setAttribute("r", "3.5");
+    ring.setAttribute("fill", "none");
+    ring.setAttribute("stroke", "#000000");
+    ring.setAttribute("stroke-width", "1.3");
+    g.appendChild(ring);
+  }
+
+  // "circled-x" (optional nice-to-have): a hollow ring AROUND the notehead
+  // instead of above it.
+  if (glyph.circleAround) {
+    const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    ring.setAttribute("cx", x);
+    ring.setAttribute("cy", y);
+    ring.setAttribute("r", "7");
+    ring.setAttribute("fill", "none");
+    ring.setAttribute("stroke", "#000000");
+    ring.setAttribute("stroke-width", "1.2");
+    g.appendChild(ring);
+  }
+
+  return g;
 }
 
 function drawTestStaffHit(voice, gridIndex, stepsPerBeat, offsetMs) {
   // resolveNotehead now takes the current staff-layout map (SPEC.md inc 4):
-  // all 10 voices resolve to a staff row, so toms/crash/floor tom/ride land
-  // in the right place here too — this is the inc-3 Test-bug fix (AC1b).
+  // all voices resolve to a staff row, so toms/crash/floor tom/ride/crash2/
+  // rideBell land in the right place here too — this is the inc-3 Test-bug
+  // fix (AC1b), extended to the increment-5 voices.
   const key = resolveNotehead(staffLayout, voice);
-  if (!key) return; // voice has no layout entry (shouldn't happen with a valid layout)
+  const entry = staffLayout[voice];
+  if (!key || !entry) return; // voice has no layout entry (shouldn't happen with a valid layout)
 
   const pos = resolveStaffPosition(gridIndex, stepsPerBeat, BEATS_PER_BAR);
 
@@ -2041,7 +2352,7 @@ function drawTestStaffHit(voice, gridIndex, stepsPerBeat, offsetMs) {
   const x = baseX + xOffsetPxFromOffsetMs(offsetMs);
   const y = testStaffVoiceY(stave, key);
 
-  const el = makeNoteheadEl(x, y, key.endsWith("/x2"));
+  const el = makeNoteheadEl(x, y, entry.notehead);
   svg.appendChild(el);
   testStaffNoteEls.push(el);
 
@@ -2510,22 +2821,41 @@ document.addEventListener("keydown", (e) => {
 // =============================================================================
 
 async function boot() {
+  let mappingCollapsed = false;
+  let staffLayoutCollapsed = false;
+
   try {
-    const [savedMap, savedInputId, savedBpm, savedStaffLayout] = await Promise.all([
-      dbGet("noteMap"),
-      dbGet("selectedInputId"),
-      dbGet("bpm"),
-      dbGet("staffLayout"),
-    ]);
+    const [savedMap, savedInputId, savedBpm, savedStaffLayout, savedMappingCollapsed, savedStaffLayoutCollapsed] =
+      await Promise.all([
+        dbGet("noteMap"),
+        dbGet("selectedInputId"),
+        dbGet("bpm"),
+        dbGet("staffLayout"),
+        dbGet("mappingPanelCollapsed"),
+        dbGet("staffLayoutPanelCollapsed"),
+      ]);
     if (savedMap) noteMap = savedMap;
     if (savedInputId) selectedInputId = savedInputId;
     if (savedBpm) currentBpm = savedBpm;
     // normaliseStaffLayout fills any missing/invalid voice with its shipped
     // default, so a stale/partial saved layout can't corrupt rendering.
     if (savedStaffLayout) staffLayout = normaliseStaffLayout(savedStaffLayout);
+
+    // Collapsible panels (SPEC.md section D): if the user has an explicit
+    // remembered open/closed state, use it. Otherwise default to COLLAPSED
+    // only once the panel has already been configured (a saved map/layout
+    // exists) — a brand-new user with nothing saved yet sees both panels
+    // open so they can set up their kit; returning users aren't shown
+    // settings they've already dealt with.
+    mappingCollapsed = savedMappingCollapsed !== undefined ? savedMappingCollapsed : !!savedMap;
+    staffLayoutCollapsed =
+      savedStaffLayoutCollapsed !== undefined ? savedStaffLayoutCollapsed : !!savedStaffLayout;
   } catch (err) {
     console.error("Failed to load persisted settings:", err);
   }
+
+  setPanelCollapsed(elMappingPanel, mappingCollapsed);
+  setPanelCollapsed(elStaffLayoutPanel, staffLayoutCollapsed);
 
   renderMappingPanel();
   renderStaffLayoutPanel();

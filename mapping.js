@@ -13,7 +13,9 @@
 // Node .mjs test via `import`.
 // =============================================================================
 
-// The 10 voices in this increment, in display order.
+// The 12 voices in this increment, in display order. SPEC.md increment 5
+// adds crash2 + rideBell to the original inc-1 set of 10 (see stafflayout.js
+// for their default staff positions/noteheads).
 export const VOICES = [
   "kick",
   "snare",
@@ -24,7 +26,9 @@ export const VOICES = [
   "tom2",
   "floorTom",
   "crash",
+  "crash2",
   "ride",
+  "rideBell",
 ];
 
 // Human-readable labels for the UI.
@@ -38,10 +42,14 @@ export const VOICE_LABELS = {
   tom2: "Tom 2",
   floorTom: "Floor Tom",
   crash: "Crash",
+  crash2: "Crash 2",
   ride: "Ride",
+  rideBell: "Ride Bell",
 };
 
-// GM / EFNOTE 5 default note numbers, per the spec.
+// GM / EFNOTE 5 default note numbers, per the spec. crash2 = 57, rideBell =
+// 53 (SPEC.md increment 5, "standard GM percussion" — editable in the
+// mapping panel either way).
 export const GM_DEFAULT_MAP = Object.freeze({
   kick: 36,
   snare: 38,
@@ -52,7 +60,9 @@ export const GM_DEFAULT_MAP = Object.freeze({
   tom2: 45,
   floorTom: 43,
   crash: 49,
+  crash2: 57,
   ride: 51,
+  rideBell: 53,
 });
 
 // Returns a fresh, independent copy of the GM default map.

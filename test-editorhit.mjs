@@ -9,6 +9,11 @@
 // snapping, and (voice, position) -> (x, y) for drawing, both against plain-
 // number stave geometry + the staff-layout map (no VexFlow / no DOM).
 //
+// Increment 5 adds keyForY: the reverse of voiceRowY, used by the staff-
+// layout panel's visual position picker (SPEC.md section A) to turn a click
+// on a mini staff into a key string, without ever showing that raw string
+// to the user.
+//
 // Run: node --test
 // =============================================================================
 
@@ -16,6 +21,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   voiceRowY,
+  keyForY,
   stepColumnX,
   splitPosition,
   drawXY,
@@ -82,6 +88,43 @@ test("voiceRowY: unknown voice / unparseable key returns null", () => {
 });
 
 // -----------------------------------------------------------------------------
+// keyForY — the staff-layout picker's click -> key string (SPEC.md
+// increment 5, section A: "click a line/space, no raw key strings shown")
+// -----------------------------------------------------------------------------
+
+test("keyForY: voiceRowY -> keyForY round-trips for every voice's DEFAULT key (a click on a voice's own row gives back its own key)", () => {
+  const g = { topLineY: 30, lineSpacing: 10 };
+  for (const voice of VOICES) {
+    const y = voiceRowY(layout, voice, g);
+    assert.equal(keyForY(y, g), layout[voice].key, `${voice} did not round-trip`);
+  }
+});
+
+test("keyForY: the exact top line pixel resolves to f/5 (the formula's anchor key, per voiceRowY's own documented convention)", () => {
+  const g = { topLineY: 30, lineSpacing: 10 };
+  assert.equal(keyForY(30, g), "f/5");
+});
+
+test("keyForY: a click snaps to the NEAREST line/space, not just the one above or below", () => {
+  const g = { topLineY: 30, lineSpacing: 10 };
+  // Halfway between two rows (5px, a quarter line-space) still snaps definitively either way, no fractional key.
+  const nearTop = keyForY(32, g);
+  assert.match(nearTop, /^[a-g]\/\d+$/);
+});
+
+test("keyForY: clicks far off the top/bottom of the staff clamp to a bounded key, not an absurd octave", () => {
+  const g = { topLineY: 30, lineSpacing: 10 };
+  const wayAbove = keyForY(-5000, g);
+  const wayBelow = keyForY(5000, g);
+  assert.match(wayAbove, /^[a-g]\/\d+$/);
+  assert.match(wayBelow, /^[a-g]\/\d+$/);
+  // Clamped, not runaway: a reasonable octave range, not e.g. "/700".
+  const octaveOf = (k) => Number(k.split("/")[1]);
+  assert.ok(octaveOf(wayAbove) < 10);
+  assert.ok(octaveOf(wayBelow) >= 0);
+});
+
+// -----------------------------------------------------------------------------
 // drawXY -> hitTest round-trip (the core AC2 guarantee)
 // -----------------------------------------------------------------------------
 
@@ -144,6 +187,6 @@ test("hitTest: snaps to the NEAREST voice row by y", () => {
 test("hitTest: a click far above the staff snaps to the highest voice (a cymbal), not null", () => {
   const hit = hitTest(layout, { x: 50, y: -100 }, GEO_1BAR);
   assert.ok(hit, "every click maps to some voice (no dead zone)");
-  // The highest-placed voice in the default layout is the ride (c/6).
-  assert.equal(hit.voice, "ride");
+  // The highest-placed voice in the default layout is rideBell (e/6, added increment 5).
+  assert.equal(hit.voice, "rideBell");
 });
