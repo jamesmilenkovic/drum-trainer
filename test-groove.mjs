@@ -19,6 +19,8 @@ import {
   DEFAULT_TIME_SIGNATURE,
   MIN_BARS,
   MAX_BARS,
+  MIN_SECTION_REPEATS,
+  MAX_SECTION_REPEATS,
   createGroove,
   stepsPerBar,
   totalSteps,
@@ -32,6 +34,11 @@ import {
   serialize,
   deserialize,
   fromDrumPart,
+  addSection,
+  updateSection,
+  removeSection,
+  expandArrangement,
+  expandSection,
 } from "./groove.js";
 import { VOICES } from "./mapping.js";
 import { SUBDIVISIONS } from "./testarea.js";
@@ -46,6 +53,7 @@ test("createGroove: defaults are a 1-bar 4/4 eighth-note empty groove", () => {
   assert.equal(g.bars, 1);
   assert.equal(g.subdivision, "eighth");
   assert.deepEqual(g.notes, []);
+  assert.deepEqual(g.sections, []);
 });
 
 test("createGroove: reuses testarea.js SUBDIVISIONS for steps-per-bar (no forked grid maths)", () => {
@@ -261,4 +269,229 @@ test("fromDrumPart: every voice it maps is a valid VOICES member (import-ready s
   const part = VOICES.map((voice, i) => ({ voice, onset: i % 8 }));
   const g = fromDrumPart(part, { subdivision: "eighth" });
   for (const n of g.notes) assert.ok(VOICES.includes(n.voice));
+});
+
+// -----------------------------------------------------------------------------
+// MAX_BARS raised for chunking (SPEC.md increment 6, section A)
+// -----------------------------------------------------------------------------
+
+test("MAX_BARS supports at least 32 bars (SPEC.md increment 6 target)", () => {
+  assert.ok(MAX_BARS >= 32, `MAX_BARS is ${MAX_BARS}, expected >= 32`);
+  const g = createGroove({ bars: 32 });
+  assert.equal(g.bars, 32);
+  assert.equal(addNote(g, "kick", stepsPerBar(g) * 31).notes.length, 1, "last bar's positions are reachable");
+});
+
+// -----------------------------------------------------------------------------
+// Sections: create / edit / delete + validation (SPEC.md increment 6, AC1)
+// -----------------------------------------------------------------------------
+
+test("addSection: adds a valid section", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "Intro", startBar: 0, endBar: 1, repeats: 1 });
+  assert.equal(g.sections.length, 1);
+  assert.deepEqual(g.sections[0], { name: "Intro", startBar: 0, endBar: 1, repeats: 1 });
+});
+
+test("addSection: rejects endBar < startBar (no-op)", () => {
+  const g = createGroove({ bars: 8 });
+  const same = addSection(g, { name: "Bad", startBar: 3, endBar: 1, repeats: 1 });
+  assert.equal(same.sections.length, 0);
+});
+
+test("addSection: rejects an out-of-bounds range (no-op)", () => {
+  const g = createGroove({ bars: 4 }); // valid bars are 0..3
+  assert.equal(addSection(g, { name: "OOB", startBar: 0, endBar: 4, repeats: 1 }).sections.length, 0);
+  assert.equal(addSection(g, { name: "OOB", startBar: -1, endBar: 2, repeats: 1 }).sections.length, 0);
+});
+
+test("addSection: rejects a repeats value outside [1, 99] (no-op)", () => {
+  const g = createGroove({ bars: 4 });
+  assert.equal(addSection(g, { name: "X", startBar: 0, endBar: 1, repeats: 0 }).sections.length, 0);
+  assert.equal(addSection(g, { name: "X", startBar: 0, endBar: 1, repeats: 100 }).sections.length, 0);
+  assert.equal(addSection(g, { name: "X", startBar: 0, endBar: 1, repeats: 1.5 }).sections.length, 0);
+  assert.equal(
+    addSection(g, { name: "X", startBar: 0, endBar: 1, repeats: MIN_SECTION_REPEATS }).sections.length,
+    1
+  );
+  assert.equal(
+    addSection(g, { name: "X", startBar: 0, endBar: 1, repeats: MAX_SECTION_REPEATS }).sections.length,
+    1
+  );
+});
+
+test("addSection: rejects a blank/whitespace-only name (no-op)", () => {
+  const g = createGroove({ bars: 4 });
+  assert.equal(addSection(g, { name: "", startBar: 0, endBar: 1, repeats: 1 }).sections.length, 0);
+  assert.equal(addSection(g, { name: "   ", startBar: 0, endBar: 1, repeats: 1 }).sections.length, 0);
+});
+
+test("addSection: rejects a range that overlaps an existing section (no-op)", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "A", startBar: 0, endBar: 3, repeats: 1 });
+  const overlapping = addSection(g, { name: "B", startBar: 3, endBar: 5, repeats: 1 }); // shares bar 3
+  assert.equal(overlapping.sections.length, 1, "overlapping section rejected");
+  const adjacent = addSection(g, { name: "B", startBar: 4, endBar: 5, repeats: 1 }); // touches but doesn't overlap
+  assert.equal(adjacent.sections.length, 2, "adjacent (non-overlapping) section accepted");
+});
+
+test("addSection: sections may cover only part of the chart (uncovered bars allowed)", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "Fill", startBar: 6, endBar: 7, repeats: 1 });
+  assert.equal(g.sections.length, 1, "a section need not start at bar 0 or cover every bar");
+});
+
+test("updateSection: edits an existing section's fields", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "Groove", startBar: 0, endBar: 1, repeats: 1 });
+  g = updateSection(g, 0, { repeats: 8 });
+  assert.equal(g.sections[0].repeats, 8);
+  assert.equal(g.sections[0].name, "Groove", "untouched fields keep their value");
+  g = updateSection(g, 0, { name: "Fill", startBar: 2, endBar: 3 });
+  assert.deepEqual(g.sections[0], { name: "Fill", startBar: 2, endBar: 3, repeats: 8 });
+});
+
+test("updateSection: rejects an edit that would overlap ANOTHER section (no-op), but allows editing in place", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "A", startBar: 0, endBar: 1, repeats: 1 });
+  g = addSection(g, { name: "B", startBar: 2, endBar: 3, repeats: 1 });
+  const clash = updateSection(g, 1, { startBar: 1, endBar: 2 }); // would overlap A's bar 1
+  assert.deepEqual(clash.sections[1], { name: "B", startBar: 2, endBar: 3, repeats: 1 }, "rejected, unchanged");
+  // Editing A's own range slightly (not touching B) should succeed — the
+  // section being edited must not be compared against itself.
+  const resized = updateSection(g, 0, { endBar: 1 });
+  assert.equal(resized.sections[0].endBar, 1);
+});
+
+test("updateSection: invalid index or invalid resulting shape is a no-op", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "A", startBar: 0, endBar: 1, repeats: 1 });
+  assert.deepEqual(updateSection(g, 5, { repeats: 2 }), g, "out-of-range index");
+  assert.deepEqual(updateSection(g, 0, { endBar: -1 }), g, "invalid endBar rejected");
+});
+
+test("removeSection: deletes by index; out-of-range index is a no-op", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "A", startBar: 0, endBar: 1, repeats: 1 });
+  g = addSection(g, { name: "B", startBar: 2, endBar: 3, repeats: 1 });
+  const removed = removeSection(g, 0);
+  assert.equal(removed.sections.length, 1);
+  assert.equal(removed.sections[0].name, "B");
+  assert.deepEqual(removeSection(g, 99), g);
+});
+
+test("setBars: shrinking bars drops a section whose range no longer fits", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "Keeps", startBar: 0, endBar: 1, repeats: 1 });
+  g = addSection(g, { name: "Dropped", startBar: 5, endBar: 7, repeats: 1 });
+  const shrunk = setBars(g, 4); // valid bars now 0..3
+  assert.equal(shrunk.sections.length, 1);
+  assert.equal(shrunk.sections[0].name, "Keeps");
+});
+
+// -----------------------------------------------------------------------------
+// Sections round-trip with the groove JSON (SPEC.md AC2)
+// -----------------------------------------------------------------------------
+
+test("serialize -> JSON -> deserialize round-trips sections identically (AC2)", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "Intro", startBar: 0, endBar: 1, repeats: 1 });
+  g = addSection(g, { name: "Fill", startBar: 6, endBar: 7, repeats: 8 });
+  g = addNote(g, "kick", 0);
+  const round = deserialize(JSON.parse(JSON.stringify(serialize(g))));
+  assert.deepEqual(round, g);
+});
+
+test("deserialize: drops malformed sections (bad shape, out of bounds) rather than corrupting", () => {
+  const g = deserialize({
+    bars: 4,
+    sections: [
+      { name: "Good", startBar: 0, endBar: 1, repeats: 1 },
+      { name: "Bad shape", startBar: 2, endBar: 1, repeats: 1 }, // endBar < startBar
+      { name: "OOB", startBar: 0, endBar: 4, repeats: 1 }, // out of bounds for 4 bars
+      { name: "Bad repeats", startBar: 2, endBar: 3, repeats: 0 },
+      { name: "", startBar: 2, endBar: 3, repeats: 1 }, // blank name
+    ],
+  });
+  assert.equal(g.sections.length, 1);
+  assert.equal(g.sections[0].name, "Good");
+});
+
+test("deserialize: drops a later section that overlaps an earlier-kept one (deterministic, first wins)", () => {
+  const g = deserialize({
+    bars: 8,
+    sections: [
+      { name: "First", startBar: 0, endBar: 3, repeats: 1 },
+      { name: "Overlaps", startBar: 2, endBar: 5, repeats: 1 }, // overlaps First's bars 2-3
+      { name: "Second", startBar: 4, endBar: 5, repeats: 1 }, // does not overlap First
+    ],
+  });
+  assert.equal(g.sections.length, 2);
+  assert.deepEqual(g.sections.map((s) => s.name), ["First", "Second"]);
+});
+
+// -----------------------------------------------------------------------------
+// Timeline expansion: sections + repeats -> flat bar sequence (SPEC.md AC5)
+// -----------------------------------------------------------------------------
+
+test("expandArrangement: no sections defined -> one pass over every bar of the groove (AC8 fallback)", () => {
+  const g = createGroove({ bars: 3 });
+  const arrangement = expandArrangement(g);
+  assert.deepEqual(arrangement.map((e) => e.bar), [0, 1, 2]);
+  for (const entry of arrangement) {
+    assert.equal(entry.sectionIndex, null);
+    assert.equal(entry.sectionName, null);
+    assert.equal(entry.repeat, 1);
+    assert.equal(entry.repeats, 1);
+  }
+});
+
+test("expandArrangement: a single section with repeats=1 (x1) expands to its bar range once", () => {
+  let g = createGroove({ bars: 4 });
+  g = addSection(g, { name: "Groove", startBar: 1, endBar: 2, repeats: 1 });
+  const arrangement = expandArrangement(g);
+  assert.deepEqual(arrangement.map((e) => e.bar), [1, 2]);
+  assert.deepEqual(arrangement.map((e) => e.repeat), [1, 1]);
+});
+
+test("expandArrangement: a section with repeats=N (xN) expands to its bar range N times back to back", () => {
+  let g = createGroove({ bars: 4 });
+  g = addSection(g, { name: "Fill", startBar: 2, endBar: 3, repeats: 3 });
+  const arrangement = expandArrangement(g);
+  assert.deepEqual(arrangement.map((e) => e.bar), [2, 3, 2, 3, 2, 3]);
+  assert.deepEqual(arrangement.map((e) => e.repeat), [1, 1, 2, 2, 3, 3]);
+  assert.ok(arrangement.every((e) => e.repeats === 3));
+  assert.ok(arrangement.every((e) => e.sectionName === "Fill"));
+});
+
+test("expandArrangement: partial coverage — uncovered bars are absent from the output", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "Verse", startBar: 0, endBar: 1, repeats: 1 });
+  g = addSection(g, { name: "Fill", startBar: 6, endBar: 6, repeats: 2 });
+  // Bars 2-5, 7 aren't in any section and shouldn't appear at all.
+  const arrangement = expandArrangement(g);
+  assert.deepEqual(arrangement.map((e) => e.bar), [0, 1, 6, 6]);
+  assert.ok(![2, 3, 4, 5, 7].some((bar) => arrangement.some((e) => e.bar === bar)));
+});
+
+test("expandArrangement: multiple sections play in chart order (by startBar) regardless of add order", () => {
+  let g = createGroove({ bars: 6 });
+  g = addSection(g, { name: "Fill", startBar: 4, endBar: 5, repeats: 1 }); // added first, plays LAST
+  g = addSection(g, { name: "Intro", startBar: 0, endBar: 1, repeats: 1 });
+  g = addSection(g, { name: "Groove", startBar: 2, endBar: 3, repeats: 1 });
+  const arrangement = expandArrangement(g);
+  assert.deepEqual(arrangement.map((e) => e.sectionName), ["Intro", "Intro", "Groove", "Groove", "Fill", "Fill"]);
+});
+
+test("expandSection: drill mode expands ONE section's bar range, ignoring its stored repeats", () => {
+  let g = createGroove({ bars: 8 });
+  g = addSection(g, { name: "Fill", startBar: 6, endBar: 7, repeats: 8 }); // stored repeats = 8
+  const drilled = expandSection(g, 0, 3); // user chose x3 for this drill session
+  assert.deepEqual(drilled.map((e) => e.bar), [6, 7, 6, 7, 6, 7]);
+  assert.ok(drilled.every((e) => e.sectionName === "Fill" && e.repeats === 3));
+});
+
+test("expandSection: unknown section index returns an empty array", () => {
+  const g = createGroove({ bars: 4 });
+  assert.deepEqual(expandSection(g, 0, 4), []);
 });

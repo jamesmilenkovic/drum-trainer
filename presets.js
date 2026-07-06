@@ -13,13 +13,15 @@
 //
 // Pure module: zero DOM / zero Web MIDI / zero AudioContext, ESM, Node-
 // testable exactly like groove.js itself. All positions are absolute
-// grid-step indices (groove.js's convention) — every preset here is 1 bar
+// grid-step indices (groove.js's convention); most presets here are 1 bar
 // of 4/4 at eighth-note resolution (8 steps/bar), matching the app's
 // existing default groove's grid so they drop straight into the Groove view
-// without a resolution mismatch.
+// without a resolution mismatch. lessonSectionedPhrase (SPEC.md increment 6)
+// is the one exception — 4 bars with sections, proving sections load
+// through this SAME preset mechanism rather than a parallel one.
 // =============================================================================
 
-import { createGroove, addNote } from "./groove.js";
+import { createGroove, addNote, addSection } from "./groove.js";
 
 const BASE = { timeSignature: { beatsPerBar: 4, beatValue: 4 }, bars: 1, subdivision: "eighth" };
 
@@ -128,6 +130,43 @@ const lessonEighthNoteDrill = buildPreset([
   [4, "hihatClosed"], [5, "hihatClosed"], [6, "hihatClosed"], [7, "hihatClosed"],
 ]);
 
+// ---- Lesson pattern 3: a 4-bar phrase with sections (SPEC.md increment 6) ----
+// Proves sections serialise/round-trip/load through the SAME shared model as
+// every other preset (groove.js's addSection, not a parallel structure):
+// Intro (bar 1, played once) -> Groove (bars 2-3, played x2) -> Fill (bar 4,
+// played once). A drummer can load this and immediately try Drill mode on
+// the Fill or Sequence mode end to end, without having to hand-build a
+// multi-bar groove + sections themselves first.
+let lessonSectionedPhrase = createGroove({ ...BASE, bars: 4 });
+// Bar 0: intro — kick + hi-hat only.
+for (const [position, voice] of [[0, "kick"], [0, "hihatClosed"], [2, "hihatClosed"], [4, "hihatClosed"], [6, "hihatClosed"]]) {
+  lessonSectionedPhrase = addNote(lessonSectionedPhrase, voice, position);
+}
+// Bars 1-2 (steps 8-23): groove — the basic rock pattern, twice.
+for (const bar of [1, 2]) {
+  const base = bar * 8;
+  for (const [offset, voice] of [
+    [0, "kick"], [0, "hihatClosed"],
+    [1, "hihatClosed"],
+    [2, "snare"], [2, "hihatClosed"],
+    [3, "hihatClosed"],
+    [4, "kick"], [4, "hihatClosed"],
+    [5, "hihatClosed"],
+    [6, "snare"], [6, "hihatClosed"],
+    [7, "hihatClosed"],
+  ]) {
+    lessonSectionedPhrase = addNote(lessonSectionedPhrase, voice, base + offset);
+  }
+}
+// Bar 3 (steps 24-31): fill — snare around the kit, crash on the downbeat of
+// what would be the next bar's "1" (last step, an anticipated crash hit).
+for (const [offset, voice] of [[24, "snare"], [25, "snare"], [26, "tom1"], [27, "tom1"], [28, "tom2"], [29, "tom2"], [30, "floorTom"], [31, "crash"]]) {
+  lessonSectionedPhrase = addNote(lessonSectionedPhrase, voice, offset);
+}
+lessonSectionedPhrase = addSection(lessonSectionedPhrase, { name: "Intro", startBar: 0, endBar: 0, repeats: 1 });
+lessonSectionedPhrase = addSection(lessonSectionedPhrase, { name: "Groove", startBar: 1, endBar: 2, repeats: 2 });
+lessonSectionedPhrase = addSection(lessonSectionedPhrase, { name: "Fill", startBar: 3, endBar: 3, repeats: 1 });
+
 // Ordered list the presets panel renders, each { id, label, groove }.
 export const PRESETS = [
   { id: "basicRock", label: "Basic Rock", groove: basicRock },
@@ -137,4 +176,5 @@ export const PRESETS = [
   { id: "fourOnTheFloor", label: "Four-on-the-Floor", groove: fourOnTheFloor },
   { id: "lessonBackbeatOnly", label: "Lesson: Backbeat Only", groove: lessonBackbeatOnly },
   { id: "lessonEighthNoteDrill", label: "Lesson: 8th-Note Drill", groove: lessonEighthNoteDrill },
+  { id: "lessonSectionedPhrase", label: "Lesson: 4-Bar Phrase with Sections", groove: lessonSectionedPhrase },
 ];

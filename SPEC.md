@@ -1,150 +1,141 @@
-# Increment 5 – Friendly staff-layout UI + richer noteheads + new voices + collapsible panels
+# Increment 6 – Section looping + repeats + layout-picker clipping fix
 
 **Project:** Drum Trainer · **PRD:** `PRDs/2-in-progress/2026-07-01-drum-trainer.md`
-**Status:** Build-ready (scoped 2026-07-02, from James's inc-4 feedback)
+**Status:** Build-ready (scoped 2026-07-04, from James's inc-5 feedback)
 **Runs on:** Chrome (mini), HTTPS · **Code:** `~/code/drum-trainer` (MacBook)
-**Base:** `main` @ `b15fcfd` (inc 4: groove editor + presets + shared model + staff-layout map).
+**Base:** `main` @ `537457d` (inc 5: staff-layout picker, richer noteheads, crash2/rideBell, collapsible panels).
 
 ---
 
-## Why this increment (James's feedback on inc 4)
+## Why this increment (James's feedback on inc 5)
 
-1. **The staff-layout tool is confusing.** It exposes raw VexFlow key strings
-   (`f/4`, `g/5`, …) that mean nothing to a human, and only offers two notehead
-   types (`normal` / `x`). James: "I don't know what f/4 etc means."
-2. **Notation isn't rich enough / not standard.** Needs more notehead options –
-   e.g. **open hi-hat = a circle above the x**, **ride bell = a diamond** – and the
-   default positions should follow standard drum notation.
-3. **Missing voices:** add **Crash 2** and **Ride Bell**.
-4. **Panels are always-open and cluttered:** make the **Note Mapping** and **Staff
-   Layout** panels **collapsible**.
+1. **He wants to practise in chunks.** Split a chart into sections, pick one (e.g.
+   the hard two bars), **loop it with a repeat count**, and play sections in
+   sequence. This is the core "drill the hard part" drummer workflow, and it's
+   groundwork for imported charts (inc 8 MusicXML) – an imported song is only
+   useful if you can chunk it.
+2. **Bug from inc 5:** the visual staff-layout picker was **clipped – the whole
+   staff wasn't visible** (Chrome on the mini). Still functional (positions could
+   be set), but unusable-looking. Pure rendering fix, folded in here.
 
-Reference (researched 2026-07-02, standard drum key): kick bottom space; snare
-middle; high tom (tom1) top space, mid tom (tom2) below snare, floor tom low; closed
-hi-hat `x` above the top line; hi-hat foot pedal `x` in the space below the staff;
-ride on the top line; **crash `x` on a ledger line above the staff**; **open hi-hat =
-small "o" above the x**; **ride bell = diamond notehead** (on the ride line); cross-
-stick = `x` on the snare line. Sources in the project references.
+## User story
+
+As a drummer, I mark up my chart into named sections ("intro", "groove", "fill"),
+set the fill to repeat ×8, and either drill one section on loop or play the whole
+sequence through – with the staff showing me where I am.
 
 ---
 
 ## Scope – what's in
 
-### A. Human-friendly staff-layout editor (replace raw key strings)
-- **Stop showing `f/4`-style VexFlow key strings.** Replace the position control with
-  a **visual picker**: a small rendered percussion staff where the user **clicks the
-  line/space** to set where a voice sits (it draws the voice's notehead there live).
-  This mirrors the inc-4 click-to-place editor paradigm James already likes.
-  - *Fallback if the visual picker is too big for this increment:* a **named
-    dropdown** ("above top line", "top space", "top line", "middle line", "below
-    staff", …) mapping to the underlying key string. Either way, **no raw key strings
-    in the UI.**
-- **Notehead control = a visual dropdown** showing the actual glyphs, not the words
-  `normal`/`x` alone (show the shape).
-- Keep it all editable + persisted (IndexedDB `staffLayout`, already wired in inc 4).
+### A. Section layer on the shared groove model
+- Extend the shared groove model (`groove.js`) with an ordered list of
+  **sections**: each = **name, start bar, end bar (contiguous range), repeat
+  count** (1–99). Sections must not overlap; together they may cover all or part
+  of the chart (uncovered bars just aren't in the arrangement).
+- **Serialises with the groove JSON** (same single model – presets and inc-8
+  imports carry sections the same way). Keep the shape import-friendly: a
+  MusicXML part with repeats/rehearsal marks should map onto it.
+- **Raise the practical bar count** – chunking implies longer charts. Editor
+  supports at least **16 bars** (target 32) without layout falling apart; the
+  staff can wrap/scroll rather than squeeze.
 
-### B. Richer notehead types
-Extend the notehead model beyond `normal` / `x` to at least:
-- **normal** – drums (kick/snare/toms).
-- **x** – cymbals / hi-hat.
-- **open** (open hi-hat) – x notehead **with a small circle ("o") above it**. (VexFlow:
-  x notehead + an "o" articulation/annotation above, since there's no single glyph.)
-- **diamond** – ride bell / cymbal bell (VexFlow diamond notehead glyph).
-- *(Optional, if cheap):* **circled-x** and **cross-stick** – nice-to-have, not required.
+### B. Section UI in the editor
+- A **section strip** above/beside the editor stave: list of sections with name,
+  bar range, repeat count; add / edit / delete. Simple inputs are fine (name +
+  start/end bar + repeats) – no drag-selection required this round.
+- The staff **highlights the active/selected section's bars** so the mapping from
+  strip to notation is obvious.
+- Validation: ranges in-bounds, no overlaps, end ≥ start.
 
-Map each type to the correct VexFlow notehead glyph / articulation in one place
-(extend `stafflayout.js` / the notehead resolver – keep it the single source of truth,
-don't scatter glyph codes).
+### C. Playback: loop + sequence modes
+- **Drill mode:** select a section → **loop it** with a repeat count (×N) or
+  **∞ until stop**. Count-in (existing click behaviour) before the first pass
+  only; seamless loop after that (no gap, no re-count-in).
+- **Sequence mode:** play the sections **in order, honouring each repeat count**
+  (intro ×1 → groove ×4 → fill ×8 → …). Show which section + which repeat you're
+  on (e.g. "groove 3/4").
+- No sections defined → playback behaves exactly as today (whole groove loops).
+  Zero regression for existing flows.
+- Scoring hookup is **inc 7** – but build the playback timeline expansion
+  (sections + repeats → flat bar sequence) as a **pure, unit-testable function**,
+  since inc 7 will score against exactly that expanded timeline.
 
-### C. New voices: Crash 2 + Ride Bell
-- Add **`crash2`** ("Crash 2") and **`rideBell`** ("Ride Bell") to `VOICES`,
-  `VOICE_LABELS`, `GM_DEFAULT_MAP`, and `DEFAULT_STAFF_LAYOUT`.
-- **GM/EFNOTE default MIDI notes:** Crash 2 = **57**, Ride Bell = **53** (standard GM
-  percussion). Confirm against the EFNOTE if it differs; the map is editable anyway.
-- **Default staff layout:** Crash 2 = `x` above the staff (near/with crash, its own
-  clickable row); Ride Bell = **diamond** notehead on the ride's position/line.
-- Everything that iterates `VOICES` (mapping panel, layout panel, editor rows,
-  scoring, Test staff) must pick these up automatically – verify no hard-coded
-  10-voice assumptions remain.
-
-### D. Collapsible panels
-- Make the **Note Mapping** and **Staff Layout** panels **collapsible** (expand/
-  collapse headers), default collapsed once configured. Remember open/closed state
-  (IndexedDB, same store) so the practice screen stays uncluttered.
-
----
-
-## A note on the "one row per voice" compromise (flag for the PO / James)
-
-Inc 4's coder gave **every voice its own distinct staff row** so the click-editor can
-reach each one (two voices on one row → one becomes unclickable). But real notation
-**shares** positions: open & closed hi-hat sit on the same line (differentiated by the
-"o"), and ride & ride bell share the ride line (differentiated by the diamond).
-
-For this increment: **keep click-reachability working** but allow shared positions by
-making the editor place notes for the **currently-selected voice** (a voice picker),
-rather than inferring voice purely from which row was clicked. That way notation can be
-properly standard (shared lines + distinguishing noteheads) without any voice becoming
-unreachable. If that's too much this round, keep distinct rows and just add the richer
-noteheads – **coder's call, but note which was chosen.**
+### D. Bugfix: staff-layout picker clipping
+- **Repro (James, 2026-07-04, Chrome on mini):** the visual staff picker renders
+  **clipped – the whole staff isn't visible**. Positions can still be set, so
+  it's a sizing/overflow issue (likely fixed-height container or SVG
+  viewBox/height mismatch), possibly aggravated by the collapsible-panel work.
+- Fix so the **full staff + above/below-staff positions** (ledger-line rows for
+  crash/kick-pedal etc.) are always visible, at both default window sizes and
+  when panels expand/collapse.
 
 ---
 
 ## Out of scope (later increments)
 
-- App drum sounds / mixer (next: was increment 5, now 6).
-- Scoring against edited grooves + record/replay (7), song import + slow-down (8),
-  save/load + progress (9), heavy features / import (10).
-- Full articulation layer (accents, flams, drags, rolls) beyond the noteheads above.
+- Scoring against sections/edited grooves + record/replay (inc 7 – next).
+- MusicXML import (inc 8), app sounds/mixer (9), song audio + slow-down (10),
+  save/load to disk (11), heavy features (12).
+- Per-section tempo changes (single tempo per chart for now – flag if trivial).
+- Drag-to-select section ranges on the staff (polish, later).
+- A/B looping by timestamp on audio (that's the inc-10 song world, not charts).
 
 ---
 
 ## Acceptance criteria
 
-1. The staff-layout panel **no longer shows raw key strings**; position is set via a
-   **visual staff picker** (or, fallback, named dropdowns), and notehead via a **glyph
-   dropdown**. `[human]`
-2. Notehead types include at least **normal, x, open (x + "o"), diamond**, each
-   rendering the correct glyph in every notation view (groove, editor, Test staff).
-   `[auto for the resolver map + human on screen]`
-3. **Crash 2** and **Ride Bell** exist as voices across mapping, layout, editor,
-   scoring and Test staff, with sensible GM defaults (57 / 53) and default positions
-   (crash2 = x above; rideBell = diamond on the ride line). `[auto + human]`
-4. **Note Mapping** and **Staff Layout** panels are **collapsible** with remembered
-   state. `[human]`
-5. Open hi-hat renders as an **x with a circle above**; ride bell renders as a
-   **diamond**. `[human]`
-6. **No regression** to inc 1–4: all `test-*.mjs` suites pass; existing voices keep
-   their positions/behaviour; the groove editor, presets, scoring and Test staff still
-   work with the (now 12) voices. `[auto]`
-7. Defaults follow standard drum notation per the reference above. `[human]`
+1. Sections (name + bar range + repeat count) can be **created, edited, deleted**
+   in the editor, with validation (no overlaps, in-bounds). `[auto + human]`
+2. Sections **serialise with the groove JSON** and round-trip intact (model →
+   JSON → model identical). `[auto]`
+3. **Drill mode** loops a selected section ×N or ∞, count-in once, seamless
+   thereafter. `[human + auto for the timeline expansion]`
+4. **Sequence mode** plays sections in order honouring repeat counts, with a
+   visible "section X, repeat n/N" indicator. `[human + auto]`
+5. The **timeline expansion** (sections + repeats → flat bar sequence) is a pure
+   function with unit tests (empty sections, ×1, ×N, partial coverage). `[auto]`
+6. Editor handles **≥16 bars** with the staff wrapping/scrolling readably.
+   `[human]`
+7. **Picker bug fixed:** the staff-layout picker shows the **entire staff
+   including above/below-staff rows**, un-clipped, with panels expanded or
+   collapsed. `[human]`
+8. **No regression** to inc 1–5: all `test-*.mjs` suites green; no-section
+   playback identical to today; presets still load. `[auto + human]`
 
 ## PO calls (flag to change)
 
-- **Visual staff picker** preferred over dropdowns for setting position (matches the
-  editor). Dropdown is an acceptable fallback if the picker blows the increment size.
-- Notehead set = normal / x / open / diamond this round; circled-x + cross-stick
-  optional.
-- Crash 2 default note 57, Ride Bell 53 (editable).
-- Shared-position vs one-row-per-voice: coder's call, but document it (see the note).
+- Sections = **contiguous, non-overlapping bar ranges** over one chart – not
+  separate grooves stitched together. (Import-friendly and simpler; revisit if
+  inc 8 demands otherwise.)
+- Repeat counts live **on the section** (data), and drill-mode ×N/∞ is a
+  **playback control** – both exist.
+- Simple inputs over drag-selection this round.
+- Count-in on first pass only; seamless looping is the point of drill mode.
+- Single tempo per chart.
 
 ## Notes for the coder
 
-- The current defaults + rationale are in `stafflayout.js`'s header comment (the
-  `f/4` etc. keys). Keep `stafflayout.js` the **single source of truth** for voice →
-  position + notehead; extend it for the new notehead types + the two new voices.
-- `VOICES` / `VOICE_LABELS` / `GM_DEFAULT_MAP` live in `mapping.js`; add `crash2` +
-  `rideBell` there and make sure nothing hard-codes "10 voices".
-- Reuse the existing IndexedDB `settings` store (`dbGet`/`dbSet`) for panel
-  open/closed state.
-- Keep the pixel↔(voice,position) hit-testing (`editorhit.js`) pure + unit-tested;
-  if you add a voice picker for shared positions, keep that logic testable headless.
-- Same build rules: single static `index.html`, vanilla JS ESM modules + Node `.mjs`
-  tests, VexFlow from the pinned CDN, no build step.
+- `groove.js` stays the single source of truth – sections are part of the groove
+  model, not a parallel structure. Presets (`presets.js`) may optionally gain
+  sections on one or two entries to prove the shape.
+- Keep the timeline expansion pure + headless-testable (new module or `groove.js`
+  export, e.g. `expandArrangement(groove) → [barIndex, …]`), mirroring how
+  `editorhit.js` stays testable.
+- The transport/click scheduler must consume the expanded timeline; watch
+  Web Audio scheduling across the loop seam (no dropped/doubled clicks at the
+  boundary).
+- For the picker fix: check container CSS height/overflow vs the rendered SVG
+  size; make the picker size to its content (all rows incl. ledger positions).
+  Add a cheap guard test if the row count → height mapping is code-derivable.
+- Same build rules: single static `index.html`, vanilla JS ESM modules + Node
+  `.mjs` tests, VexFlow from the pinned CDN, no build step.
 
 ## Test notes
-- **MacBook (no kit):** unit-test the extended notehead resolver, the new voices in
-  the layout/mapping maps, and any new hit-test/voice-picker logic. All existing
-  suites stay green.
-- **Mini (kit):** James confirms the layout UI is now understandable, the new
-  noteheads/voices render right, and the panels collapse. After the diff gate.
+
+- **MacBook (no kit):** unit-test the section model (validation, serialisation
+  round-trip) + timeline expansion (all edge cases) + any height/row-count logic
+  for the picker. All existing suites stay green.
+- **Mini (kit):** James feel-tests – define sections on a lesson groove, drill
+  the hard bars ×8 (loop feels seamless), run the full sequence, and confirm the
+  picker now shows the whole staff. After the diff gate.

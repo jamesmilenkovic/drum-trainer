@@ -26,6 +26,8 @@ import {
   splitPosition,
   drawXY,
   hitTest,
+  layoutVerticalReach,
+  PICKER_CLAMP_STEPS,
 } from "./editorhit.js";
 import { getDefaultStaffLayout } from "./stafflayout.js";
 import { VOICES } from "./mapping.js";
@@ -189,4 +191,47 @@ test("hitTest: a click far above the staff snaps to the highest voice (a cymbal)
   assert.ok(hit, "every click maps to some voice (no dead zone)");
   // The highest-placed voice in the default layout is rideBell (e/6, added increment 5).
   assert.equal(hit.voice, "rideBell");
+});
+
+// -----------------------------------------------------------------------------
+// layoutVerticalReach — cheap guard for the picker-clipping bugfix (SPEC.md
+// increment 6, section D). Locks in the DEFAULT layout's actual reach so a
+// future voice/position change that pushes further off-staff gets caught
+// here rather than silently re-clipping the picker.
+// -----------------------------------------------------------------------------
+
+test("layoutVerticalReach: default layout reaches 5 steps above the top line (rideBell, e/6) and 7 below the bottom line (floorTom, f/3)", () => {
+  const reach = layoutVerticalReach(layout);
+  assert.equal(reach.aboveSteps, 5);
+  assert.equal(reach.belowSteps, 7);
+});
+
+test("layoutVerticalReach: a layout with everything ON the 5-line staff has zero reach", () => {
+  const onStaff = { snare: { key: "c/5", notehead: "normal" }, kick: { key: "f/4", notehead: "normal" } };
+  assert.deepEqual(layoutVerticalReach(onStaff), { aboveSteps: 0, belowSteps: 0 });
+});
+
+test("layoutVerticalReach: an empty/garbage layout reaches nothing (defensive)", () => {
+  assert.deepEqual(layoutVerticalReach({}), { aboveSteps: 0, belowSteps: 0 });
+  assert.deepEqual(layoutVerticalReach({ x: { key: "not-a-key" } }), { aboveSteps: 0, belowSteps: 0 });
+});
+
+// -----------------------------------------------------------------------------
+// PICKER_CLAMP_STEPS — regression guard (SPEC.md increment 6 code-review
+// follow-up): index.html's picker-canvas sizing widens its margin to at
+// least this many steps, so the canvas is never smaller than what a click
+// can actually reach. keyForY's own default clampSteps must keep matching
+// this exported constant (not silently drift into two different numbers).
+// -----------------------------------------------------------------------------
+
+test("PICKER_CLAMP_STEPS: keyForY's default clampSteps matches the exported constant index.html sizes its picker canvas from", () => {
+  assert.equal(PICKER_CLAMP_STEPS, 8);
+  // A click PICKER_CLAMP_STEPS+1 steps above the top line should clamp to
+  // exactly PICKER_CLAMP_STEPS above it when clampSteps is left at its
+  // default (i.e. keyForY(y, geo) with no third argument uses this constant,
+  // not a hard-coded literal that could drift from it).
+  const geo = { topLineY: 100, lineSpacing: 10 };
+  const halfSpacing = geo.lineSpacing / 2;
+  const farAboveY = geo.topLineY - (PICKER_CLAMP_STEPS + 5) * halfSpacing;
+  assert.equal(keyForY(farAboveY, geo), keyForY(farAboveY, geo, PICKER_CLAMP_STEPS));
 });

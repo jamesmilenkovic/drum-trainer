@@ -288,6 +288,126 @@
       max-width: 620px;
     }
 
+    /* ---- Playback mode + drill controls (SPEC.md increment 6, section C) ---- */
+    .playback-mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .playback-mode-row label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .drill-controls {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 0.85rem;
+    }
+    .drill-controls.visible { display: flex; }
+    .drill-controls select {
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 8px;
+    }
+    .drill-controls input[type="number"] {
+      width: 50px;
+      text-align: center;
+      font-size: 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 4px;
+    }
+    .drill-controls label { display: flex; align-items: center; gap: 4px; }
+
+    /* ---- Section strip (SPEC.md increment 6, section B) ---- */
+    #sections-panel { max-width: 620px; }
+    #sections-panel .section-row {
+      display: grid;
+      grid-template-columns: 1fr 60px 8px 60px 50px auto auto;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #sections-panel .section-row:last-child { border-bottom: none; }
+    #sections-panel .section-row input[type="text"],
+    #sections-panel .section-row input[type="number"] {
+      width: 100%;
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 6px;
+    }
+    #sections-panel .range-sep { text-align: center; color: var(--text-muted); }
+    #sections-panel .section-select-btn,
+    #sections-panel .section-delete-btn {
+      font-size: 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #sections-panel .section-select-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(240, 165, 0, 0.12);
+    }
+    #sections-panel .section-delete-btn:hover { background: var(--miss); border-color: var(--miss); color: #fff; }
+    #sections-add-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    #sections-add-row input[type="text"] {
+      flex: 1;
+      min-width: 100px;
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 6px 8px;
+    }
+    #sections-add-row input[type="number"] {
+      width: 60px;
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 6px 6px;
+    }
+    #sections-add-row label { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); }
+    #section-add-btn {
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    #section-add-btn:hover { background: var(--border); }
+    #sections-error {
+      margin-top: 8px;
+      color: var(--miss);
+      min-height: 1em;
+    }
+
     .bpm-row {
       display: flex;
       align-items: center;
@@ -716,6 +836,23 @@
         <button class="adj" id="bpm-up5">+5</button>
       </div>
       <input type="number" id="bpm-input" min="30" max="300" value="100" />
+
+      <!-- Playback mode (SPEC.md increment 6, section C): with no sections
+           defined this is invisible/irrelevant and playback is exactly
+           today's whole-groove loop (AC8). Once sections exist, pick Drill
+           (loop one section ×N or forever) or Sequence (play every section
+           in order, honouring each one's own repeat count). -->
+      <div id="playback-mode-row" class="playback-mode-row">
+        <label><input type="radio" name="playback-mode" value="loop" id="mode-loop" checked> Loop groove</label>
+        <label><input type="radio" name="playback-mode" value="drill" id="mode-drill"> Drill section</label>
+        <label><input type="radio" name="playback-mode" value="sequence" id="mode-sequence"> Sequence</label>
+      </div>
+      <div id="drill-controls" class="drill-controls">
+        <select id="drill-section-select"></select>
+        <label>× <input type="number" id="drill-repeats-input" min="1" max="99" value="4" /></label>
+        <label><input type="checkbox" id="drill-infinite-checkbox" /> Loop forever</label>
+      </div>
+
       <button id="transport-btn" aria-label="Start">&#x25B6;</button>
       <span class="hint">or press Space</span>
       <div id="transport-state"></div>
@@ -743,10 +880,7 @@
         </label>
         <label class="editor-field">
           Bars
-          <select id="editor-bars-select">
-            <option value="1">1</option>
-            <option value="2">2</option>
-          </select>
+          <select id="editor-bars-select"></select>
         </label>
         <label class="editor-field">
           Subdivision
@@ -760,6 +894,26 @@
       </div>
       <div id="editor-output"></div>
       <p class="hint">Click a voice's line/space at a beat to add or remove a note.</p>
+    </section>
+
+    <!-- Section strip (SPEC.md increment 6, section B): named bar-range
+         sections over the editor's groove above — create/edit/delete with
+         simple inputs (no drag-selection this round). The selected row
+         highlights that bar range on the editor stave above and is what
+         Drill mode drills. Bar numbers shown here are 1-based (friendlier
+         than the model's 0-based startBar/endBar) and converted at the
+         edges (renderSectionsPanel / the add-row handler). -->
+    <section class="panel" id="sections-panel">
+      <h2>Sections</h2>
+      <div id="sections-rows"></div>
+      <div id="sections-add-row">
+        <input type="text" id="section-name-input" placeholder="Name (e.g. Fill)" />
+        <label>Bar <input type="number" id="section-start-input" min="1" placeholder="start" /></label>
+        <label>to <input type="number" id="section-end-input" min="1" placeholder="end" /></label>
+        <label>× <input type="number" id="section-repeats-input" min="1" max="99" value="1" /></label>
+        <button id="section-add-btn">Add section</button>
+      </div>
+      <div id="sections-error" class="hint"></div>
     </section>
 
     <!-- Groove notation (VexFlow) — displays the current practice groove
@@ -904,11 +1058,29 @@ import {
   stepsPerBar as grooveStepsPerBar,
   totalSteps as grooveTotalSteps,
   notesAtPosition as grooveNotesAtPosition,
+  MIN_BARS as GROOVE_MIN_BARS,
+  MAX_BARS as GROOVE_MAX_BARS,
+  MIN_SECTION_REPEATS,
+  MAX_SECTION_REPEATS,
+  addSection as grooveAddSection,
+  updateSection as grooveUpdateSection,
+  removeSection as grooveRemoveSection,
+  expandArrangement as grooveExpandArrangement,
+  expandSection as grooveExpandSection,
 } from "./groove.js";
 
-import { hitTest as editorHitTest, drawXY as editorDrawXY, keyForY, voiceRowY } from "./editorhit.js";
+import {
+  hitTest as editorHitTest,
+  drawXY as editorDrawXY,
+  keyForY,
+  voiceRowY,
+  layoutVerticalReach,
+  PICKER_CLAMP_STEPS,
+} from "./editorhit.js";
 
 import { PRESETS } from "./presets.js";
+
+import { stepBarInfo, isBeyondArrangement } from "./clickschedule.js";
 
 // =============================================================================
 // PracticeEngine
@@ -968,24 +1140,34 @@ class PracticeEngine {
   #tickInterval;
   #onStep;     // fn(barStep, scheduledTime, isAccent, isCountIn)
   #onExpectedHit; // fn({voice, time, barIndex, step})
+  #maxBars;    // finite bar-count ceiling (SPEC.md increment 6), or Infinity to loop forever
+  #onArrangementDone; // fn(lastScheduledTime) — fired ONCE, see #tick() below
 
   #running = false;
   #tickerId = null;
   #startTime = 0;   // AudioContext time of step 0 of the count-in bar
   #nextStep = 0;     // monotonically increasing 8th-note step counter (count-in + groove)
+  #doneNotified = false; // guards #onArrangementDone against firing more than once per run
 
   #bpm = 100;
 
   #log = [];
   static #LOG_LIMIT = 10_000;
 
-  constructor({ audioContext, lookahead = 0.1, tickInterval = 25, onStep, onExpectedHit } = {}) {
+  // maxBars (SPEC.md increment 6 code-review fix): a finite bar-count
+  // ceiling for drill xN / sequence mode, or Infinity (default) for the
+  // no-sections/loop-forever case — see clickschedule.js's header comment
+  // for why this decision lives HERE (inside the scheduler's own tick loop)
+  // rather than on a separate wall-clock timer racing it.
+  constructor({ audioContext, lookahead = 0.1, tickInterval = 25, onStep, onExpectedHit, maxBars = Infinity, onArrangementDone } = {}) {
     if (!audioContext) throw new Error("PracticeEngine: audioContext is required");
     this.#ctx = audioContext;
     this.#lookahead = lookahead;
     this.#tickInterval = tickInterval;
     this.#onStep = typeof onStep === "function" ? onStep : () => {};
     this.#onExpectedHit = typeof onExpectedHit === "function" ? onExpectedHit : () => {};
+    this.#maxBars = Number.isFinite(maxBars) && maxBars > 0 ? maxBars : Infinity;
+    this.#onArrangementDone = typeof onArrangementDone === "function" ? onArrangementDone : () => {};
   }
 
   get isRunning() { return this.#running; }
@@ -1002,6 +1184,7 @@ class PracticeEngine {
     this.#running = true;
     this.#nextStep = 0;
     this.#log = [];
+    this.#doneNotified = false;
     this.#startTime = this.#ctx.currentTime + 0.05;
     this.#tick();
     this.#tickerId = setInterval(() => this.#tick(), this.#tickInterval);
@@ -1032,14 +1215,26 @@ class PracticeEngine {
       const scheduledTime = this.#startTime + this.#nextStep * secondsPerStep;
       if (scheduledTime > horizon) break;
 
-      // First STEPS_PER_BAR steps = count-in (click only). Steps after that
-      // are the looping groove bar (stepIndex 0 = bar 2's first step).
-      const isCountIn = this.#nextStep < STEPS_PER_BAR;
-      const grooveStepIndex = isCountIn ? null : (this.#nextStep - STEPS_PER_BAR) % STEPS_PER_BAR;
-      const barStep = isCountIn ? this.#nextStep % STEPS_PER_BAR : grooveStepIndex;
+      const { isCountIn, barStep, barIndex } = stepBarInfo(this.#nextStep, STEPS_PER_BAR);
+
+      // Arrangement-aware stop (SPEC.md increment 6 code-review fix): refuse
+      // to schedule (and therefore never call onStep -> playClick for) any
+      // step belonging to a bar beyond #maxBars. This is decided HERE, in
+      // the exact loop that commits a click, so a finite arrangement (drill
+      // xN, sequence) can never play one bar too many — see
+      // clickschedule.js's header comment for the wall-clock-timer bug this
+      // replaces.
+      if (isBeyondArrangement({ isCountIn, barIndex }, this.#maxBars)) {
+        if (!this.#doneNotified) {
+          this.#doneNotified = true;
+          const lastScheduledTime = this.#startTime + (this.#nextStep - 1) * secondsPerStep;
+          this.#onArrangementDone(lastScheduledTime);
+        }
+        break;
+      }
+
+      const grooveStepIndex = isCountIn ? null : barStep;
       const isAccent = barStep === 0;
-      // barIndex: which loop pass we're on (0 = count-in, 1 = first groove bar, ...)
-      const barIndex = isCountIn ? 0 : Math.floor((this.#nextStep - STEPS_PER_BAR) / STEPS_PER_BAR) + 1;
 
       this.#onStep(barStep, scheduledTime, isAccent, isCountIn, barIndex);
 
@@ -1267,9 +1462,13 @@ let staffLayout = getDefaultStaffLayout();
 // equivalent to the app's original hard-coded GROOVE (see PracticeEngine's
 // GROOVE constant above) so existing display/scoring behaviour holds.
 // NOTE: scoring stays wired to the fixed GROOVE array / PracticeEngine —
-// this groove-model instance is DISPLAY ONLY this increment (SPEC.md
-// section D explicitly defers "wire scoring to arbitrary grooves" to
-// increment 6).
+// this groove-model instance is DISPLAY ONLY (SPEC.md section D deferred
+// "wire scoring to arbitrary grooves"; increment 6's own spec confirms that
+// hookup is inc 7's job, not this increment's). Increment 6 DOES wire the
+// transport's LOOP STRUCTURE (how many bars, in what order, when to stop)
+// to this groove's sections/bars via expandArrangement() — see
+// startTransport()/buildArrangement() below — while the actual click
+// content per bar stays exactly as before.
 let practiceGroove = defaultPracticeGroove();
 
 // The editor's own in-memory groove (SPEC.md section B) — starts as a copy
@@ -1277,6 +1476,20 @@ let practiceGroove = defaultPracticeGroove();
 // diverges as soon as the user edits it (still in-memory only, per SPEC.md
 // "no disk persistence of user grooves this round").
 let editorGroove = practiceGroove;
+
+// The section currently selected in the Sections strip (SPEC.md increment
+// 6, section B) — an index into editorGroove.sections, or null. Drives both
+// the editor stave's highlight and Drill mode's default section. Reset to
+// null whenever it would point at a section that no longer exists (deleted,
+// or the array was reordered by a bar-count shrink dropping it).
+let selectedSectionIndex = null;
+
+// Playback mode (SPEC.md increment 6, section C): "loop" (today's plain
+// whole-groove loop, forever — the ONLY mode when no sections are defined,
+// per AC8's zero-regression requirement), "drill" (loop one section ×N or
+// forever), or "sequence" (play every section in order, honouring each
+// section's own stored repeat count).
+let playbackMode = "loop";
 
 let audioCtx = null;
 let engine = null;
@@ -1336,6 +1549,15 @@ const elEditorSubdivisionSelect = document.getElementById("editor-subdivision-se
 const elEditorClearBtn = document.getElementById("editor-clear-btn");
 const elEditorOutput = document.getElementById("editor-output");
 
+// Section strip (SPEC.md increment 6, section B)
+const elSectionsRows = document.getElementById("sections-rows");
+const elSectionNameInput = document.getElementById("section-name-input");
+const elSectionStartInput = document.getElementById("section-start-input");
+const elSectionEndInput = document.getElementById("section-end-input");
+const elSectionRepeatsInput = document.getElementById("section-repeats-input");
+const elSectionAddBtn = document.getElementById("section-add-btn");
+const elSectionsError = document.getElementById("sections-error");
+
 const elBpmDisplay = document.getElementById("bpm-display");
 const elBpmInput = document.getElementById("bpm-input");
 const elBpmDown5 = document.getElementById("bpm-down5");
@@ -1344,6 +1566,15 @@ const elBpmUp1 = document.getElementById("bpm-up1");
 const elBpmUp5 = document.getElementById("bpm-up5");
 const elTransportBtn = document.getElementById("transport-btn");
 const elTransportState = document.getElementById("transport-state");
+
+// Playback mode (SPEC.md increment 6, section C)
+const elModeLoop = document.getElementById("mode-loop");
+const elModeDrill = document.getElementById("mode-drill");
+const elModeSequence = document.getElementById("mode-sequence");
+const elDrillControls = document.getElementById("drill-controls");
+const elDrillSectionSelect = document.getElementById("drill-section-select");
+const elDrillRepeatsInput = document.getElementById("drill-repeats-input");
+const elDrillInfiniteCheckbox = document.getElementById("drill-infinite-checkbox");
 
 const elNotationOutput = document.getElementById("notation-output");
 const elSummaryContent = document.getElementById("summary-content");
@@ -1536,18 +1767,66 @@ let pickerVoice = null; // voice currently being positioned, or null if closed
 let pickerStave = null;
 let pickerGeometry = null; // { topLineY, lineSpacing } off the rendered mini stave
 
+// Canvas sizing (SPEC.md increment 6, section D bugfix): James reported the
+// picker was clipped — the whole staff wasn't visible. The old code used a
+// FIXED canvas (160x130) and a fixed stave y (55), guessed to have enough
+// headroom/footroom for off-staff voices. It didn't: with the default
+// layout, floorTom (7 steps below the bottom line) lands almost exactly on
+// the old canvas's bottom edge and gets clipped. Fixed here by sizing the
+// canvas from the ACTUAL layout's reach (editorhit.js's layoutVerticalReach),
+// widened to at least keyForY's own clickable clamp range (PICKER_CLAMP_STEPS)
+// so the canvas is never smaller than what a click can actually reach —
+// instead of a guess. Stays correct however far a voice sits off the staff,
+// default OR user-edited layout, and however the surrounding panels are
+// expanded/collapsed (this canvas's own size never depends on the panel's
+// container width/visibility).
+//
+// STAVE_TOP_PADDING: VexFlow's Stave reserves a FIXED ~40px gap between the
+// y you construct it at and its own top line (getYForLine(0)) — verified
+// empirically (a Stave built at y=0/30/55/100 all measured getYForLine(0)
+// exactly 40px below the constructor y). That headroom is already enough
+// for anything that needs LESS than 40px of above-staff margin, and this
+// sizing accounts for it explicitly rather than assuming the constructor's
+// y IS the top line's pixel position (the bug in the original fixed-size
+// code, which is why its guessed margin came up short).
+const PICKER_WIDTH = 160;
+const PICKER_STAFF_HEIGHT = 40; // 4 line-gaps at VexFlow's default 10px spacing
+const PICKER_NOTEHEAD_MARGIN = 16; // headroom for a notehead's radius + the "open" ring/annotation above it
+const STAVE_TOP_PADDING = 40; // VexFlow's own fixed constructor-y -> top-line offset, see above
+
+function pickerCanvasLayout() {
+  const { aboveSteps, belowSteps } = layoutVerticalReach(staffLayout);
+  const halfSpacing = 5; // VexFlow's default lineSpacing (10) / 2 — matches editorhit.js's own assumption
+  // The canvas must fit whichever is FURTHER out: the current layout's
+  // actual voices, or the full range a click can still snap to (keyForY's
+  // own PICKER_CLAMP_STEPS default) — otherwise a layout with every voice
+  // sitting close to the staff would size the canvas too small to show (or
+  // even receive a click for) a position keyForY would still happily return
+  // (code-review follow-up: these two numbers must be tied together, not
+  // just coincidentally similar).
+  const topSteps = Math.max(aboveSteps, PICKER_CLAMP_STEPS);
+  const bottomSteps = Math.max(belowSteps, PICKER_CLAMP_STEPS);
+  const topMarginNeeded = topSteps * halfSpacing + PICKER_NOTEHEAD_MARGIN;
+  const bottomMarginNeeded = bottomSteps * halfSpacing + PICKER_NOTEHEAD_MARGIN;
+  // staveY only needs to make up any SHORTFALL beyond VexFlow's own built-in
+  // top padding — if the built-in padding already covers it, staveY is 0.
+  const staveY = Math.max(0, topMarginNeeded - STAVE_TOP_PADDING);
+  const height = staveY + STAVE_TOP_PADDING + PICKER_STAFF_HEIGHT + bottomMarginNeeded;
+  return { staveY, height };
+}
+
 function renderStaffLayoutPicker() {
   elStaffLayoutPickerOutput.innerHTML = "";
   pickerStave = null;
   pickerGeometry = null;
   if (!pickerVoice || typeof VexFlow === "undefined") return;
 
-  const width = 160;
+  const { staveY, height } = pickerCanvasLayout();
   const renderer = new VexFlow.Renderer(elStaffLayoutPickerOutput, VexFlow.Renderer.Backends.SVG);
-  renderer.resize(width, 130);
+  renderer.resize(PICKER_WIDTH, height);
   const context = renderer.getContext();
 
-  pickerStave = new VexFlow.Stave(10, 55, width - 20);
+  pickerStave = new VexFlow.Stave(10, staveY, PICKER_WIDTH - 20);
   pickerStave.setContext(context).draw();
   pickerGeometry = {
     topLineY: pickerStave.getYForLine(0),
@@ -1828,7 +2107,8 @@ const NOTE_DURATION = { quarter: "q", eighth: "8", sixteenth: "16" };
 let staveNotes = [];  // one VexFlow tickable per absolute grid step (note or rest)
 let vexRenderer = null;
 let vexContext = null;
-let vexStave = null;
+let vexStave = null;  // bar 0's Stave — kept for setPlayhead()'s bar-invariant y-range
+let vexStaves = [];   // one VexFlow Stave per bar, current render
 
 // Guarded the same way initMidi() guards navigator.requestMIDIAccess: check
 // for absence up front (VexFlow CDN blocked/offline/ad-blocker never
@@ -1836,6 +2116,24 @@ let vexStave = null;
 // notation-library hiccup shows a clear message in the notation panel
 // instead of throwing an uncaught error that could take down the rest of
 // boot() (see the guarded call sites below and in boot()/switchMode()).
+//
+// One Stave + Voice PER BAR (SPEC.md increment 6 bugfix): a VexFlow Voice
+// can only faithfully hold ONE measure's worth of ticks — cramming an
+// entire multi-bar groove into a single Voice (the pre-increment-6 code)
+// throws VexFlow's own "Too many ticks" error as soon as bars > 1. This was
+// a PRE-EXISTING gap (MAX_BARS was already 2 before this increment, and
+// this path was apparently never manually exercised with bars=2 through the
+// editor), caught here via headless-browser verification because raising
+// MAX_BARS to 32 for sections makes multi-bar grooves the COMMON case
+// rather than a rarely-touched edge option — shipping section support
+// without this fix would make the "Groove" panel fail to render for almost
+// any sectioned groove. Mirrors the editor's own per-bar Stave layout
+// (renderEditor, above) — same barWidth (150px) and horizontal-scroll
+// container, so a wide multi-bar groove behaves the same way in both
+// panels. The single-bar case (still the default/common case) renders
+// IDENTICALLY to before this fix — same container-sized width, same stave
+// position — since num_beats-per-Voice was always correct for exactly one
+// bar; only >1-bar grooves take the new per-bar path.
 function renderNotation() {
   elNotationOutput.innerHTML = "";
 
@@ -1845,61 +2143,75 @@ function renderNotation() {
   }
 
   try {
-    const width = Math.max(340, Math.min(600, elNotationOutput.clientWidth || 600));
+    const ts = practiceGroove.timeSignature;
+    const containerWidth = Math.max(340, Math.min(600, elNotationOutput.clientWidth || 600));
+    const barWidth = practiceGroove.bars > 1 ? 150 : containerWidth - 20;
+    const staveY = 30;
+    const totalWidth = 10 + barWidth * practiceGroove.bars + 10;
 
     vexRenderer = new VexFlow.Renderer(elNotationOutput, VexFlow.Renderer.Backends.SVG);
-    vexRenderer.resize(width, 180);
+    vexRenderer.resize(totalWidth, 180);
     vexContext = vexRenderer.getContext();
 
-    const ts = practiceGroove.timeSignature;
-    vexStave = new VexFlow.Stave(10, 30, width - 20);
-    vexStave.addClef("percussion").setTimeSignature(`${ts.beatsPerBar}/${ts.beatValue}`);
-    vexStave.setContext(vexContext).draw();
+    vexStaves = [];
+    let x = 10;
+    for (let bar = 0; bar < practiceGroove.bars; bar++) {
+      const stave = new VexFlow.Stave(x, staveY, barWidth);
+      if (bar === 0) stave.addClef("percussion").setTimeSignature(`${ts.beatsPerBar}/${ts.beatValue}`);
+      stave.setContext(vexContext).draw();
+      vexStaves.push(stave);
+      x += stave.getWidth();
+    }
+    vexStave = vexStaves[0];
 
     // Build one tickable per absolute grid step so setPlayhead()/drawGhostNote()
-    // can keep addressing staveNotes[step] exactly as in inc 2/3 (unchanged for
-    // the default groove = 1 bar of 8 eighth steps). A step with voices becomes
-    // one StaveNote stacking their staff-layout keys; an empty step becomes a
-    // rest of the same duration so the bar's ticks add up for the Formatter.
+    // can keep addressing staveNotes[step] exactly as in inc 2/3. A step with
+    // voices becomes one StaveNote stacking their staff-layout keys; an empty
+    // step becomes a rest of the same duration so each BAR's ticks add up to
+    // exactly that bar's Voice capacity (ts.beatsPerBar beats).
     const dur = NOTE_DURATION[practiceGroove.subdivision] || "8";
-    const total = grooveTotalSteps(practiceGroove);
+    const stepsPerBarCount = grooveStepsPerBar(practiceGroove);
     staveNotes = [];
-    for (let step = 0; step < total; step++) {
-      const notesHere = grooveNotesAtPosition(practiceGroove, step)
-        .map((n) => ({ voice: n.voice, key: resolveNotehead(staffLayout, n.voice), entry: staffLayout[n.voice] }))
-        .filter((n) => n.key);
-      const keys = notesHere.map((n) => n.key);
-      const staveNote =
-        keys.length > 0
-          ? new VexFlow.StaveNote({ keys, duration: dur, stemDirection: -1 })
-          : new VexFlow.StaveNote({ keys: ["b/4"], duration: dur + "r" });
+    const beams = [];
 
-      // "open" noteheads (SPEC.md section B) get a small "o" annotation
-      // above their own notehead within the chord — VexFlow has no single
-      // built-in glyph for "open hi-hat", so this layers a text annotation
-      // on top of the x notehead, per the spec's explicit instruction.
-      notesHere.forEach((n, i) => {
-        if (getNoteheadGlyph(n.entry?.notehead)?.circleAbove) {
-          const annotation = new VexFlow.Annotation("o").setFont("Georgia", 10, "normal");
-          staveNote.addModifier(annotation, i);
-        }
-      });
+    for (let bar = 0; bar < practiceGroove.bars; bar++) {
+      const barNotes = [];
+      for (let stepInBar = 0; stepInBar < stepsPerBarCount; stepInBar++) {
+        const step = bar * stepsPerBarCount + stepInBar;
+        const notesHere = grooveNotesAtPosition(practiceGroove, step)
+          .map((n) => ({ voice: n.voice, key: resolveNotehead(staffLayout, n.voice), entry: staffLayout[n.voice] }))
+          .filter((n) => n.key);
+        const keys = notesHere.map((n) => n.key);
+        const staveNote =
+          keys.length > 0
+            ? new VexFlow.StaveNote({ keys, duration: dur, stemDirection: -1 })
+            : new VexFlow.StaveNote({ keys: ["b/4"], duration: dur + "r" });
 
-      staveNotes.push(staveNote);
+        // "open" noteheads (SPEC.md section B) get a small "o" annotation
+        // above their own notehead within the chord — VexFlow has no single
+        // built-in glyph for "open hi-hat", so this layers a text annotation
+        // on top of the x notehead, per the spec's explicit instruction.
+        notesHere.forEach((n, i) => {
+          if (getNoteheadGlyph(n.entry?.notehead)?.circleAbove) {
+            const annotation = new VexFlow.Annotation("o").setFont("Georgia", 10, "normal");
+            staveNote.addModifier(annotation, i);
+          }
+        });
+
+        staveNotes.push(staveNote);
+        barNotes.push(staveNote);
+      }
+
+      const voice = new VexFlow.Voice({ num_beats: ts.beatsPerBar, beat_value: ts.beatValue });
+      voice.addTickables(barNotes);
+      new VexFlow.Formatter().joinVoices([voice]).formatToStave([voice], vexStaves[bar]);
+
+      // Pass THIS bar's tickable list (notes + rests) so generateBeams breaks
+      // beams at rests and never beams across a bar line.
+      beams.push(...VexFlow.Beam.generateBeams(barNotes));
+      voice.draw(vexContext, vexStaves[bar]);
     }
 
-    const voice = new VexFlow.Voice({ num_beats: ts.beatsPerBar * practiceGroove.bars, beat_value: ts.beatValue });
-    voice.addTickables(staveNotes);
-
-    new VexFlow.Formatter().joinVoices([voice]).formatToStave([voice], vexStave);
-
-    // Pass the full tickable list (notes + rests) so generateBeams breaks
-    // beams at rests rather than beaming across an empty step in an edited
-    // groove. (The default groove has a hi-hat on every step, so this is a
-    // no-op there — no inc-2/3 rendering change.)
-    const beams = VexFlow.Beam.generateBeams(staveNotes);
-
-    voice.draw(vexContext, vexStave);
     beams.forEach((b) => b.setContext(vexContext).draw());
   } catch (err) {
     console.error("Failed to render notation:", err);
@@ -2043,6 +2355,34 @@ function renderEditor() {
     const svg = elEditorOutput.querySelector("svg");
     if (!svg) return;
 
+    // Highlight the selected section's bar range (SPEC.md increment 6,
+    // section B: "the staff highlights the active/selected section's
+    // bars"), drawn BEFORE the grid guides/notes below so it sits behind
+    // them and doesn't obscure anything. Clamped to whatever bars this
+    // groove currently has, in case a section was defined before the bar
+    // count shrank (setBars already drops fully out-of-range sections, but
+    // this is a defensive clamp against the render itself).
+    const selectedSection = editorGroove.sections[selectedSectionIndex];
+    if (selectedSection) {
+      const fromBar = Math.max(0, Math.min(selectedSection.startBar, editorBarGeometries.length - 1));
+      const toBar = Math.max(0, Math.min(selectedSection.endBar, editorBarGeometries.length - 1));
+      if (fromBar <= toBar) {
+        const fromBg = editorBarGeometries[fromBar];
+        const toBg = editorBarGeometries[toBar];
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", fromBg.noteStartX - 4);
+        rect.setAttribute("y", editorStaves[fromBar].getYForLine(0) - 16);
+        rect.setAttribute("width", toBg.noteEndX - fromBg.noteStartX + 8);
+        rect.setAttribute(
+          "height",
+          editorStaves[fromBar].getYForLine(4) - editorStaves[fromBar].getYForLine(0) + 32
+        );
+        rect.setAttribute("rx", "4");
+        rect.setAttribute("fill", "rgba(240, 165, 0, 0.16)");
+        svg.appendChild(rect);
+      }
+    }
+
     // Faint vertical grid guides at each subdivision column boundary, so the
     // click target for each step is visible (helps the "snap to the grid"
     // affordance the spec asks for).
@@ -2104,12 +2444,24 @@ elEditorOutput.addEventListener("click", (e) => {
 // editor stave and the Groove view. `syncControls` also snaps the bars/
 // subdivision/time-sig selects back to the groove (used when a whole groove
 // is loaded/cleared, not when the user themselves just changed one control).
+//
+// Also keeps the SPEC.md increment 6 section-strip UI in sync: any groove
+// change (preset load, bars/subdivision/time-sig edit, clear, or a section
+// add/edit/delete) can add/remove/reorder sections or strand
+// selectedSectionIndex (e.g. shrinking bars drops an out-of-range section —
+// see groove.js's setBars), so both are refreshed here rather than at each
+// call site individually.
 function applyEditorGroove(next, { syncControls = false } = {}) {
   editorGroove = next;
   practiceGroove = next;
   if (syncControls) syncEditorControls();
+  if (selectedSectionIndex !== null && !editorGroove.sections[selectedSectionIndex]) {
+    selectedSectionIndex = null;
+  }
   renderEditor();
   renderNotation();
+  renderSectionsPanel();
+  renderPlaybackControls();
 }
 
 function syncEditorControls() {
@@ -2125,6 +2477,20 @@ function populatePresetSelect() {
     opt.value = preset.id;
     opt.textContent = preset.label;
     elPresetSelect.appendChild(opt);
+  }
+}
+
+// Bars select: 1..MAX_BARS (SPEC.md increment 6, section A — MAX_BARS raised
+// to 32 so a chart can be chunked into sections). Built from groove.js's own
+// MIN_BARS/MAX_BARS rather than hard-coded <option> tags, so it can never
+// drift out of sync with what the model actually accepts.
+function populateBarsSelect() {
+  elEditorBarsSelect.innerHTML = "";
+  for (let n = GROOVE_MIN_BARS; n <= GROOVE_MAX_BARS; n++) {
+    const opt = document.createElement("option");
+    opt.value = String(n);
+    opt.textContent = String(n);
+    elEditorBarsSelect.appendChild(opt);
   }
 }
 
@@ -2150,7 +2516,9 @@ elEditorSubdivisionSelect.addEventListener("change", () => {
 });
 
 elEditorClearBtn.addEventListener("click", () => {
-  // Empty groove keeping the current time-sig / bars / subdivision.
+  // Empty groove keeping the current time-sig / bars / subdivision (this
+  // also resets sections back to none, same "start over" semantics as
+  // clearing notes — applyEditorGroove resets selectedSectionIndex to match).
   applyEditorGroove(
     createGroove({
       timeSignature: editorGroove.timeSignature,
@@ -2160,6 +2528,245 @@ elEditorClearBtn.addEventListener("click", () => {
   );
   elPresetSelect.value = "";
 });
+
+// =============================================================================
+// Section strip (SPEC.md increment 6, section B)
+//
+// Simple inputs (no drag-selection this round, per SPEC.md's explicit PO
+// call): name + start/end bar + repeats, add/edit/delete. Bar numbers are
+// shown 1-based here (friendlier than the model's 0-based startBar/endBar);
+// the +/-1 conversion happens only at this UI boundary — groove.js itself
+// always works in 0-based bars.
+//
+// Validation (AC1) is surfaced as a plain-English message rather than
+// individual field errors, since groove.js's addSection/updateSection fail
+// closed (return the groove UNCHANGED — same object reference — on any
+// invalid input) without saying which rule tripped; a single message naming
+// all the rules is simpler than trying to guess which one applied.
+// =============================================================================
+
+function showSectionsError(message) {
+  elSectionsError.textContent = message;
+}
+
+function clearSectionsError() {
+  elSectionsError.textContent = "";
+}
+
+const SECTION_VALIDATION_MESSAGE =
+  "Couldn't save that section — check the name isn't blank, the bar range is within the chart and doesn't overlap another section, end bar ≥ start bar, and repeats is 1–99.";
+
+function renderSectionsPanel() {
+  elSectionsRows.innerHTML = "";
+
+  editorGroove.sections.forEach((section, index) => {
+    const row = document.createElement("div");
+    row.className = "section-row";
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = section.name;
+    nameInput.addEventListener("change", () => applySectionEdit(index, { name: nameInput.value }));
+
+    const startInput = document.createElement("input");
+    startInput.type = "number";
+    startInput.min = "1";
+    startInput.max = String(editorGroove.bars);
+    startInput.value = String(section.startBar + 1);
+    startInput.addEventListener("change", () => {
+      const v = parseInt(startInput.value, 10);
+      applySectionEdit(index, { startBar: v - 1 });
+    });
+
+    const sep = document.createElement("span");
+    sep.className = "range-sep";
+    sep.textContent = "–";
+
+    const endInput = document.createElement("input");
+    endInput.type = "number";
+    endInput.min = "1";
+    endInput.max = String(editorGroove.bars);
+    endInput.value = String(section.endBar + 1);
+    endInput.addEventListener("change", () => {
+      const v = parseInt(endInput.value, 10);
+      applySectionEdit(index, { endBar: v - 1 });
+    });
+
+    const repeatsInput = document.createElement("input");
+    repeatsInput.type = "number";
+    repeatsInput.min = String(MIN_SECTION_REPEATS);
+    repeatsInput.max = String(MAX_SECTION_REPEATS);
+    repeatsInput.value = String(section.repeats);
+    repeatsInput.addEventListener("change", () => {
+      const v = parseInt(repeatsInput.value, 10);
+      applySectionEdit(index, { repeats: v });
+    });
+
+    // Selecting a section highlights its bars on the editor stave above
+    // (renderEditor) and becomes Drill mode's default section.
+    const selectBtn = document.createElement("button");
+    selectBtn.type = "button";
+    selectBtn.className = "section-select-btn";
+    selectBtn.textContent = selectedSectionIndex === index ? "Selected" : "Select";
+    if (selectedSectionIndex === index) selectBtn.classList.add("active");
+    selectBtn.addEventListener("click", () => {
+      selectedSectionIndex = selectedSectionIndex === index ? null : index;
+      renderSectionsPanel();
+      renderEditor();
+      renderPlaybackControls();
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "section-delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => {
+      // Adjust the selection BEFORE applying the groove change, so
+      // applyEditorGroove's own re-render picks up the corrected index
+      // (removing a section shifts every later index down by one).
+      if (selectedSectionIndex === index) selectedSectionIndex = null;
+      else if (selectedSectionIndex !== null && selectedSectionIndex > index) selectedSectionIndex--;
+      clearSectionsError();
+      applyEditorGroove(grooveRemoveSection(editorGroove, index));
+    });
+
+    row.append(nameInput, startInput, sep, endInput, repeatsInput, selectBtn, deleteBtn);
+    elSectionsRows.appendChild(row);
+  });
+}
+
+// Applies an edit to the section at `index`; on rejection (invalid shape,
+// out of bounds, overlap), surfaces SECTION_VALIDATION_MESSAGE and re-renders
+// the strip so the input snaps back to the last VALID saved value rather
+// than the rejected one sitting in the field looking like it took effect.
+function applySectionEdit(index, changes) {
+  const next = grooveUpdateSection(editorGroove, index, changes);
+  if (next === editorGroove) {
+    showSectionsError(SECTION_VALIDATION_MESSAGE);
+    renderSectionsPanel();
+    return;
+  }
+  clearSectionsError();
+  applyEditorGroove(next);
+}
+
+elSectionAddBtn.addEventListener("click", () => {
+  const name = elSectionNameInput.value;
+  const startRaw = parseInt(elSectionStartInput.value, 10);
+  const endRaw = parseInt(elSectionEndInput.value, 10);
+  const repeatsRaw = parseInt(elSectionRepeatsInput.value, 10);
+  const next = grooveAddSection(editorGroove, {
+    name,
+    startBar: Number.isFinite(startRaw) ? startRaw - 1 : NaN,
+    endBar: Number.isFinite(endRaw) ? endRaw - 1 : NaN,
+    repeats: Number.isFinite(repeatsRaw) ? repeatsRaw : 1,
+  });
+  if (next === editorGroove) {
+    showSectionsError(SECTION_VALIDATION_MESSAGE);
+    return;
+  }
+  clearSectionsError();
+  elSectionNameInput.value = "";
+  elSectionStartInput.value = "";
+  elSectionEndInput.value = "";
+  elSectionRepeatsInput.value = "1";
+  applyEditorGroove(next);
+});
+
+// =============================================================================
+// Playback mode: loop / drill / sequence (SPEC.md increment 6, section C)
+//
+// "loop" is today's plain behaviour (whole groove, forever) and the ONLY
+// mode available with no sections defined (AC8: zero regression). "drill"
+// loops ONE selected section x N or forever (repeat count here is a
+// PLAYBACK CONTROL, independent of the section's own stored `repeats` — PO
+// call, see groove.js's expandSection). "sequence" plays every section in
+// chart order, honouring each section's own stored repeat count
+// (groove.js's expandArrangement).
+// =============================================================================
+
+function renderPlaybackControls() {
+  const hasSections = editorGroove.sections.length > 0;
+  elModeDrill.disabled = !hasSections;
+  elModeSequence.disabled = !hasSections;
+  if (!hasSections && playbackMode !== "loop") {
+    playbackMode = "loop";
+  }
+  elModeLoop.checked = playbackMode === "loop";
+  elModeDrill.checked = playbackMode === "drill";
+  elModeSequence.checked = playbackMode === "sequence";
+  elDrillControls.classList.toggle("visible", playbackMode === "drill");
+
+  // Drill's section dropdown, in chart order (matches expandArrangement's
+  // own startBar sort, so this order matches Sequence mode's playback order
+  // too — least surprising for a user comparing the two modes).
+  const ordered = editorGroove.sections
+    .map((section, index) => ({ section, index }))
+    .sort((a, b) => a.section.startBar - b.section.startBar);
+  const previousValue = elDrillSectionSelect.value;
+  elDrillSectionSelect.innerHTML = "";
+  for (const { section, index } of ordered) {
+    const opt = document.createElement("option");
+    opt.value = String(index);
+    opt.textContent = `${section.name} (bar ${section.startBar + 1}–${section.endBar + 1})`;
+    elDrillSectionSelect.appendChild(opt);
+  }
+  // Prefer the section currently selected in the strip (if any), else keep
+  // whatever was previously chosen here if it still exists.
+  if (selectedSectionIndex !== null && editorGroove.sections[selectedSectionIndex]) {
+    elDrillSectionSelect.value = String(selectedSectionIndex);
+  } else if (ordered.some(({ index }) => String(index) === previousValue)) {
+    elDrillSectionSelect.value = previousValue;
+  }
+}
+
+for (const radio of [elModeLoop, elModeDrill, elModeSequence]) {
+  radio.addEventListener("change", () => {
+    if (!radio.checked) return;
+    playbackMode = radio.value;
+    renderPlaybackControls();
+  });
+}
+
+// Disables the playback-mode radios + drill controls while the transport is
+// running — reading them fresh mid-run would silently invalidate the
+// already-scheduled arrangement, same reasoning as Test mode's
+// setTestControlsDisabled() locking BPM/subdivision while testEngine runs.
+function setPlaybackControlsDisabled(disabled) {
+  elModeLoop.disabled = disabled;
+  elModeDrill.disabled = disabled || editorGroove.sections.length === 0;
+  elModeSequence.disabled = disabled || editorGroove.sections.length === 0;
+  elDrillSectionSelect.disabled = disabled;
+  elDrillRepeatsInput.disabled = disabled;
+  elDrillInfiniteCheckbox.disabled = disabled;
+}
+
+// Builds { arrangement, loopForever } for the CURRENT playback mode — the
+// timeline the transport (startTransport, below) actually consumes for
+// display ("section X, repeat n/N") and for knowing when to stop itself.
+// SPEC.md increment 6: "the transport/click scheduler must consume the
+// expanded timeline".
+function buildArrangement() {
+  if (playbackMode === "drill" && editorGroove.sections.length > 0) {
+    const sectionIndex = elDrillSectionSelect.value !== "" ? parseInt(elDrillSectionSelect.value, 10) : 0;
+    const infinite = elDrillInfiniteCheckbox.checked;
+    const repeatsRaw = parseInt(elDrillRepeatsInput.value, 10);
+    const repeats = clamp(Number.isFinite(repeatsRaw) ? repeatsRaw : 1, MIN_SECTION_REPEATS, MAX_SECTION_REPEATS);
+    // Infinite drill only needs ONE pass of the section's bars — the
+    // transport wraps it forever via arrIdx % arrangement.length, exactly
+    // like the no-sections "loop" case wraps the whole groove.
+    const arrangement = grooveExpandSection(editorGroove, sectionIndex, infinite ? 1 : repeats);
+    return { arrangement, loopForever: infinite };
+  }
+  if (playbackMode === "sequence" && editorGroove.sections.length > 0) {
+    return { arrangement: grooveExpandArrangement(editorGroove), loopForever: false };
+  }
+  // "loop" mode, or drill/sequence picked with no sections defined (can't
+  // happen via the UI — renderPlaybackControls() disables those radios —
+  // but this is the same safe fallback either way): the plain, always-
+  // looping whole-groove behaviour, i.e. exactly today's playback (AC8).
+  return { arrangement: grooveExpandArrangement(editorGroove), loopForever: true };
+}
 
 // =============================================================================
 // Rolling notated Test staff (SPEC.md increment 3, section A)
@@ -2555,14 +3162,53 @@ function startTransport() {
   // so a single offset capture is enough to keep them in sync.
   midiToAudioOffset = performance.now() - audioCtx.currentTime * 1000;
 
+  // Arrangement for THIS run (SPEC.md increment 6, section C) — which bars
+  // play, in what order, and whether the transport should stop itself once
+  // they're done. Locked in once at Start (see setPlaybackControlsDisabled
+  // below), same "read the controls once, don't re-extrapolate mid-run"
+  // stance the Test area already takes for its own BPM/subdivision.
+  //
+  // The underlying click content is UNCHANGED from before this increment —
+  // PracticeEngine still schedules the same fixed 1-bar click pattern via
+  // its own ever-incrementing barIndex, and scoring below is still keyed to
+  // that same barIndex exactly as before (scoring hookup to arbitrary
+  // grooves/sections is SPEC.md's inc 7). What's new is `maxBars`, passed to
+  // PracticeEngine below: the engine's OWN tick loop now refuses to schedule
+  // a click beyond the arrangement (see clickschedule.js), rather than a
+  // separate wall-clock timer trying to guess when to stop — the original
+  // approach here raced PracticeEngine's own lookahead scheduler and always
+  // lost, producing one extra click at the boundary (code review caught
+  // this before commit).
+  const { arrangement, loopForever } = buildArrangement();
+  const maxBars = loopForever ? Infinity : arrangement.length;
+  setPlaybackControlsDisabled(true);
+
   engine = new PracticeEngine({
     audioContext: audioCtx,
+    maxBars,
     onStep: (barStep, scheduledTime, isAccent, isCountIn, barIndex) => {
       playClick(audioCtx, scheduledTime, isAccent);
       const delay = Math.max(0, (scheduledTime - audioCtx.currentTime) * 1000);
       setTimeout(() => {
-        elTransportState.textContent = isCountIn ? `Count-in… beat ${barStep + 1}` : "Playing";
+        // Which arrangement entry this real (non-count-in) bar corresponds
+        // to. loopForever wraps the arrangement with % (exactly how the
+        // no-sections/plain-loop case already looped its one hard-coded bar
+        // forever); a finite arrangement (drill xN, sequence) advances
+        // through it once — PracticeEngine's own maxBars guarantees onStep
+        // is never even called for a barIndex beyond arrangement.length, so
+        // arrIdx is always in bounds here without a separate check.
+        const arrIdx = loopForever ? (barIndex - 1) % arrangement.length : barIndex - 1;
+        const arrEntry = !isCountIn ? arrangement[arrIdx] : null;
+
+        if (isCountIn) {
+          elTransportState.textContent = `Count-in… beat ${barStep + 1}`;
+        } else if (arrEntry && arrEntry.sectionName !== null) {
+          elTransportState.textContent = `Playing — ${arrEntry.sectionName} (repeat ${arrEntry.repeat}/${arrEntry.repeats})`;
+        } else {
+          elTransportState.textContent = "Playing"; // identical to today whenever there's no section to name (AC8)
+        }
         setPlayhead(isCountIn ? null : barStep);
+
         // Score the PREVIOUS groove bar once we've moved past its judging
         // window (this bar's step 0 means the previous bar's last expected
         // hit + 80ms window has definitely elapsed).
@@ -2570,6 +3216,22 @@ function startTransport() {
           scoredBarIndexes.add(barIndex - 1);
           scoreBar(barIndex - 1);
         }
+      }, delay);
+    },
+    // Fired ONCE by PracticeEngine's own tick loop the moment it decides NOT
+    // to schedule anything past the arrangement's last bar (see
+    // clickschedule.js) — i.e. after the true last click is already
+    // committed, never before. lastScheduledTime is that final click's own
+    // scheduled AudioContext time, so this grace delay is exact (not a
+    // guessed bar duration) and safe to be a plain setTimeout: by this point
+    // no MORE audio can be scheduled for this run regardless of timing, so
+    // there's nothing left for a wall-clock delay to race.
+    onArrangementDone: (lastScheduledTime) => {
+      const delay = Math.max(0, (lastScheduledTime - audioCtx.currentTime) * 1000);
+      const tokenAtArm = runToken;
+      setTimeout(() => {
+        if (runToken !== tokenAtArm) return; // superseded by a new run
+        stopTransport();
       }, delay);
     },
     onExpectedHit: (hit) => {
@@ -2620,6 +3282,10 @@ function stopTransport() {
   elTransportBtn.setAttribute("aria-label", "Start");
   elTransportBtn.innerHTML = "&#x25B6;";
   elTransportState.textContent = "Stopped";
+  // Re-enable the playback-mode/drill controls now the run's over — via
+  // renderPlaybackControls() rather than a blanket "disabled = false" so the
+  // "no sections -> drill/sequence stay disabled" rule is reapplied too.
+  renderPlaybackControls();
 }
 
 function toggleTransport() {
@@ -2860,6 +3526,7 @@ async function boot() {
   renderMappingPanel();
   renderStaffLayoutPanel();
   populatePresetSelect();
+  populateBarsSelect();
   syncEditorControls();
   // renderNotation() already catches its own errors internally (see its
   // definition), but this try/catch is a second safety net: it guarantees
@@ -2877,6 +3544,8 @@ async function boot() {
   } catch (err) {
     console.error("renderEditor() failed unexpectedly during boot:", err);
   }
+  renderSectionsPanel();
+  renderPlaybackControls();
   elBpmDisplay.textContent = String(currentBpm);
   elBpmInput.value = String(currentBpm);
   elTransportState.textContent = "Stopped";

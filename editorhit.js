@@ -97,23 +97,65 @@ function keyForDiatonicStep(step) {
 //
 // geometry: same { topLineY, lineSpacing } shape as voiceRowY. clampSteps:
 // how many diatonic steps above the top line / below the bottom line a
-// click is still allowed to snap to (default 8 — enough ledger-line room
-// for every voice in the shipped default layout, above (rideBell/crash2)
-// and below (floorTom), plus a little slack for a custom layout that pushes
-// a voice slightly further, without letting a wild click miles off-canvas
-// produce a silly key many ledger lines away).
+// click is still allowed to snap to (default PICKER_CLAMP_STEPS — enough
+// ledger-line room for every voice in the shipped default layout, above
+// (rideBell/crash2) and below (floorTom), plus a little slack for a custom
+// layout that pushes a voice slightly further, without letting a wild click
+// miles off-canvas produce a silly key many ledger lines away).
+//
+// PICKER_CLAMP_STEPS is exported (not just a bare default-param literal) so
+// index.html's picker-canvas sizing (pickerCanvasLayout, SPEC.md increment 6
+// section D) can size the canvas from the SAME number this function clamps
+// clicks to, rather than a separately-guessed margin that happens to match
+// only by coincidence (code-review follow-up) — the canvas must be at least
+// big enough to show/click every position keyForY can ever return, not just
+// wherever the CURRENT layout's voices happen to sit.
 //
 // Returns the nearest "<letter>/<octave>" key string for a click at pixel
 // y — the reverse of voiceRowY, used by the staff-layout panel's visual
 // picker (click a line/space -> save that position for the voice being
 // edited) instead of asking the user to type a raw key string.
-export function keyForY(y, geometry, clampSteps = 8) {
+export const PICKER_CLAMP_STEPS = 8;
+
+export function keyForY(y, geometry, clampSteps = PICKER_CLAMP_STEPS) {
   const halfSpacing = geometry.lineSpacing / 2;
   const rawStep = TOP_LINE_KEY_STEP - Math.round((y - geometry.topLineY) / halfSpacing);
   const minStep = TOP_LINE_KEY_STEP - 8 - clampSteps; // bottom line (f/4) minus headroom
   const maxStep = TOP_LINE_KEY_STEP + clampSteps;
   const clamped = Math.min(maxStep, Math.max(minStep, rawStep));
   return keyForDiatonicStep(clamped);
+}
+
+// ---- How far a staff-layout map reaches above/below the drawn 5-line staff
+// (SPEC.md increment 6, section D bugfix) ----
+//
+// The visual staff-layout picker (index.html's renderStaffLayoutPicker) used
+// a fixed canvas size that assumed a guess at how far any voice's notehead
+// could sit off the actual 5-line staff. For the shipped default layout,
+// rideBell/crash2 sit several steps ABOVE the top line and floorTom sits
+// several steps BELOW the bottom line — enough that the fixed guess clipped
+// the bottom of the staff (James's inc-5 bug report: "the whole staff wasn't
+// visible"). This computes the true reach from whatever layout is actually
+// in use (default OR edited), in diatonic steps beyond the nominal top line
+// ("g/5") / bottom line ("f/4") — see stafflayout.js's header comment for
+// that line convention — so the picker (or any other view) can size its
+// canvas to fit EVERY voice's row, not a hard-coded guess.
+//
+// Returns { aboveSteps, belowSteps }, both >= 0. A voice whose key doesn't
+// parse is skipped (defensive — same stance as voiceRowY/diatonicStep).
+const NOMINAL_TOP_LINE_STEP = diatonicStep("g/5");
+const NOMINAL_BOTTOM_LINE_STEP = diatonicStep("f/4");
+
+export function layoutVerticalReach(layout) {
+  let aboveSteps = 0;
+  let belowSteps = 0;
+  for (const voice of Object.keys(layout || {})) {
+    const step = diatonicStep(layout[voice]?.key);
+    if (step === null) continue;
+    if (step > NOMINAL_TOP_LINE_STEP) aboveSteps = Math.max(aboveSteps, step - NOMINAL_TOP_LINE_STEP);
+    if (step < NOMINAL_BOTTOM_LINE_STEP) belowSteps = Math.max(belowSteps, NOMINAL_BOTTOM_LINE_STEP - step);
+  }
+  return { aboveSteps, belowSteps };
 }
 
 // ---- Position <-> x (pixel column) ----
