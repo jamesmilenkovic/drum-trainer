@@ -194,6 +194,40 @@ test("hitTest: a click far above the staff snaps to the highest voice (a cymbal)
 });
 
 // -----------------------------------------------------------------------------
+// Row-wrapping (SPEC.md increment 7, section C): a barGeometry entry may
+// carry its own rowTopLineY when a chart wraps bars across multiple lines.
+// -----------------------------------------------------------------------------
+
+test("drawXY/hitTest: a bar with its own rowTopLineY draws/hit-tests against ITS row, not the shared staffGeometry", () => {
+  const geoRows = {
+    stepsPerBar: 8,
+    // bar 0 is row 0 (top-line y 30); bar 1 is row 1, wrapped onto its own
+    // line 190px further down (top-line y 220) — same shape as index.html's
+    // computeBarLayout would produce.
+    barGeometries: [
+      { noteStartX: 40, noteEndX: 200, rowTopLineY: 30 },
+      { noteStartX: 40, noteEndX: 200, rowTopLineY: 220 },
+    ],
+    staffGeometry: { topLineY: 30, lineSpacing: 10 }, // row 0's geometry, as a fallback/default
+  };
+  const xyRow0 = drawXY(layout, "snare", 0, geoRows); // bar 0, row 0
+  const xyRow1 = drawXY(layout, "snare", 8, geoRows); // bar 1, row 1
+  assert.equal(xyRow0.y, 45); // matches the plain single-row test above
+  assert.equal(xyRow1.y, 235); // same relative offset (15px below its OWN row's top line)
+
+  const hit0 = hitTest(layout, { x: xyRow0.x, y: xyRow0.y }, geoRows);
+  assert.deepEqual(hit0, { voice: "snare", position: 0 });
+  const hit1 = hitTest(layout, { x: xyRow1.x, y: xyRow1.y }, geoRows);
+  assert.deepEqual(hit1, { voice: "snare", position: 8 });
+});
+
+test("drawXY/hitTest: a barGeometry WITHOUT rowTopLineY falls back to the shared staffGeometry (pre-increment-7 single-row shape, unchanged)", () => {
+  const xy = drawXY(layout, "kick", 0, GEO_1BAR);
+  const hit = hitTest(layout, { x: xy.x, y: xy.y }, GEO_1BAR);
+  assert.deepEqual(hit, { voice: "kick", position: 0 });
+});
+
+// -----------------------------------------------------------------------------
 // layoutVerticalReach — cheap guard for the picker-clipping bugfix (SPEC.md
 // increment 6, section D). Locks in the DEFAULT layout's actual reach so a
 // future voice/position change that pushes further off-staff gets caught

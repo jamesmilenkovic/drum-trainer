@@ -603,7 +603,8 @@
     .meter-readout .dir-late  { color: var(--late); }
 
     /* ---- Groove editor (SPEC.md increment 4) ---- */
-    #editor-panel { max-width: 620px; }
+    /* #editor-panel's max-width is set by the full-width notation override
+       further down (SPEC.md increment 7, section C) — not repeated here. */
     #editor-controls {
       display: flex;
       flex-wrap: wrap;
@@ -653,7 +654,8 @@
        here is enough to make staff lines + noteheads read clearly; only the
        inc-2 ghost-note colours (green/amber/red) need to stay legible on
        white, which they already are (see drawGhostNote's palette). */
-    #notation-panel { max-width: 620px; }
+    /* #notation-panel's max-width is set by the full-width notation override
+       further down (SPEC.md increment 7, section C) — not repeated here. */
     #notation-output {
       width: 100%;
       overflow-x: auto;
@@ -664,7 +666,9 @@
     #notation-output svg { display: block; margin: 0 auto; }
 
     /* ---- Test staff (VexFlow, rolling/wrapping) ---- */
-    #test-staff-panel { max-width: 620px; }
+    /* #test-staff-panel's max-width is set by the full-width notation
+       override further down (SPEC.md increment 7, section C) — not
+       repeated here. */
     #test-staff-output {
       width: 100%;
       overflow-x: auto;
@@ -756,6 +760,147 @@
     #summary-panel .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
     #summary-panel .label { color: var(--text-muted); }
 
+    /* ---- Notation full-width + size control (SPEC.md increment 7, section
+       C): kills the inc-6 "can't see across" clipping bug — these panels'
+       notation output is meant to use the WHOLE window width, not the
+       shared 620px panel cap every other panel keeps. The size (S/M/L)
+       control itself scales VexFlow's own render context (see
+       renderWithScale in the script below), not a CSS transform. ---- */
+    #editor-panel, #notation-panel, #test-staff-panel, #routine-notation-panel {
+      max-width: none;
+      width: 100%;
+    }
+
+    #display-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 10px 16px;
+    }
+    #display-panel select {
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 8px;
+    }
+
+    /* ---- Groove library + Routine builder (SPEC.md increment 7, sections
+       A/B) — reuse the sections-panel's row/add-row visual language for
+       consistency. ---- */
+    #library-panel .library-row,
+    #routine-library-panel .library-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto auto;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #library-panel .library-row:last-child,
+    #routine-library-panel .library-row:last-child { border-bottom: none; }
+    #library-panel .library-row button,
+    #routine-library-panel .library-row button {
+      font-size: 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #library-panel .library-row button:hover,
+    #routine-library-panel .library-row button:hover { background: var(--border); }
+    #library-panel .library-row .library-delete-btn:hover,
+    #routine-library-panel .library-row .library-delete-btn:hover { background: var(--miss); border-color: var(--miss); color: #fff; }
+    #library-save-row, #routine-name-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    #library-save-row input[type="text"], #routine-name-row input[type="text"] {
+      flex: 1;
+      min-width: 120px;
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 6px 8px;
+    }
+    #library-save-row button, #routine-name-row button {
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    #library-save-row button:hover, #routine-name-row button:hover { background: var(--border); }
+    #library-empty, #routine-library-empty { color: var(--text-muted); font-size: 0.85rem; }
+
+    #routine-hint { color: var(--text-muted); font-size: 0.78rem; margin-top: 8px; }
+
+    #routine-items-panel .routine-item-row {
+      display: grid;
+      grid-template-columns: 1fr 90px 70px auto auto auto auto;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #routine-items-panel .routine-item-row:last-child { border-bottom: none; }
+    #routine-items-panel select,
+    #routine-items-panel input[type="number"] {
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 6px;
+      width: 100%;
+    }
+    #routine-items-panel button {
+      font-size: 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #routine-items-panel button:hover { background: var(--border); }
+    #routine-add-item-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+    #routine-add-item-row select { min-width: 160px; }
+
+    #routine-transport-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+    #routine-drill-controls { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+    #routine-drill-controls select, #routine-drill-controls input[type="number"] {
+      font-size: 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 5px 8px;
+    }
+    #routine-status { font-size: 0.9rem; text-align: center; min-height: 1.4em; }
+    #routine-status .routine-status-item { font-weight: 600; color: var(--accent); }
+
   </style>
   <!-- VexFlow 5.0.0, pinned via jsDelivr CDN. UMD build exposes a single
        global `VexFlow` (flat namespace: VexFlow.Renderer, VexFlow.Stave,
@@ -817,9 +962,22 @@
     <div class="legend-note">Colour = how close. Position (left/right of centre) = early/late.</div>
   </section>
 
+  <!-- Notation size control (SPEC.md increment 7, section C): default LARGE,
+       persisted in IndexedDB, applies to the Groove/editor view, the Routine
+       view, and the Test staff alike. -->
+  <div class="panel" id="display-panel">
+    <label for="notation-size-select">Notation size</label>
+    <select id="notation-size-select">
+      <option value="S">Small</option>
+      <option value="M">Medium</option>
+      <option value="L" selected>Large</option>
+    </select>
+  </div>
+
   <!-- Mode tabs -->
   <div id="mode-tabs">
     <button class="tab-btn active" id="tab-groove" data-mode="groove">Groove</button>
+    <button class="tab-btn" id="tab-routines" data-mode="routines">Routines</button>
     <button class="tab-btn" id="tab-test" data-mode="test">Test</button>
   </div>
 
@@ -896,6 +1054,21 @@
       <p class="hint">Click a voice's line/space at a beat to add or remove a note.</p>
     </section>
 
+    <!-- Groove library (SPEC.md increment 7, section A): save the CURRENT
+         editor groove under a name, then load/rename/duplicate/delete saved
+         grooves. Presets stay read-only seeds — this is the "save a copy to
+         library" mechanism for them too, since loading a preset just
+         populates the editor the same as loading a library groove does. -->
+    <section class="panel" id="library-panel">
+      <h2>Groove Library</h2>
+      <div id="library-rows"></div>
+      <div id="library-empty" class="hint">No saved grooves yet.</div>
+      <div id="library-save-row">
+        <input type="text" id="library-save-name" placeholder="Name this groove…" />
+        <button id="library-save-btn">Save current groove to library</button>
+      </div>
+    </section>
+
     <!-- Section strip (SPEC.md increment 6, section B): named bar-range
          sections over the editor's groove above — create/edit/delete with
          simple inputs (no drag-selection this round). The selected row
@@ -941,6 +1114,59 @@
     <section class="panel" id="summary-panel">
       <h2>Scoring</h2>
       <div id="summary-content"></div>
+    </section>
+
+  </div>
+
+  <!-- ============================ ROUTINES MODE ============================
+       SPEC.md increment 7, section B/C: stitch saved library grooves into an
+       ordered, named routine (each item = groove + repeats + its own BPM),
+       play it through with clean tempo switches at item boundaries, drill a
+       single item without leaving the routine, and read big notation with
+       live hits as they land. -->
+  <div class="mode-panel" id="mode-panel-routines">
+
+    <section class="panel" id="routine-library-panel">
+      <h2>Routine Library</h2>
+      <div id="routine-library-rows"></div>
+      <div id="routine-library-empty" class="hint">No saved routines yet.</div>
+    </section>
+
+    <section class="panel" id="routine-items-panel">
+      <h2>Routine Builder</h2>
+      <div id="routine-name-row">
+        <input type="text" id="routine-name-input" placeholder="Routine name (e.g. Kick practice)" />
+        <button id="routine-save-btn">Save routine</button>
+        <button id="routine-new-btn">New routine</button>
+      </div>
+      <p class="routine-hint" id="routine-hint">
+        Each item keeps a link to its groove in the library (renaming it is safe) — editing a saved groove updates every routine that uses it.
+      </p>
+      <div id="routine-items-rows"></div>
+      <div id="routine-add-item-row">
+        <select id="routine-add-groove-select"></select>
+        <label>× <input type="number" id="routine-add-repeats" min="1" max="99" value="4" /></label>
+        <label>BPM <input type="number" id="routine-add-bpm" min="30" max="300" value="100" /></label>
+        <button id="routine-add-item-btn">Add item</button>
+      </div>
+    </section>
+
+    <section id="routine-transport-controls">
+      <button id="routine-transport-btn" aria-label="Start">&#x25B6;</button>
+      <span class="hint">Play the whole routine in order</span>
+      <div id="routine-drill-controls">
+        <span>Each item row's own "Drill" button uses:</span>
+        <label>× <input type="number" id="routine-drill-repeats-input" min="1" max="99" value="4" /></label>
+        <label><input type="checkbox" id="routine-drill-infinite-checkbox" /> Loop forever</label>
+      </div>
+      <div id="routine-status"></div>
+    </section>
+
+    <!-- Notation for whichever item is currently active (SPEC.md section C
+         full-width/LARGE, section D live hits) -->
+    <section class="panel" id="routine-notation-panel">
+      <h2>Now Playing</h2>
+      <div id="routine-notation-output"></div>
     </section>
 
   </div>
@@ -1067,6 +1293,8 @@ import {
   removeSection as grooveRemoveSection,
   expandArrangement as grooveExpandArrangement,
   expandSection as grooveExpandSection,
+  serialize as grooveSerialize,
+  deserialize as grooveDeserialize,
 } from "./groove.js";
 
 import {
@@ -1081,6 +1309,27 @@ import {
 import { PRESETS } from "./presets.js";
 
 import { stepBarInfo, isBeyondArrangement } from "./clickschedule.js";
+
+// SPEC.md increment 7: groove library + routine builder + full-width/LARGE
+// notation + live hit rendering.
+import {
+  createRoutine,
+  addItem as routineAddItem,
+  removeItem as routineRemoveItem,
+  updateItem as routineUpdateItem,
+  moveItemUp as routineMoveItemUp,
+  moveItemDown as routineMoveItemDown,
+  setName as routineSetName,
+  serialize as routineSerialize,
+  deserialize as routineDeserialize,
+  expandRoutine,
+  MIN_ITEM_REPEATS,
+  MAX_ITEM_REPEATS,
+} from "./routine.js";
+
+import { buildClickPlan, secondsPerStepForBpm } from "./routineschedule.js";
+
+import { NOTATION_SCALE, computeBarLayout } from "./notationlayout.js";
 
 // =============================================================================
 // PracticeEngine
@@ -1400,6 +1649,18 @@ function playClick(ctx, time, isAccent) {
 //
 // Single object store "settings" keyed by name, storing: noteMap, inputId,
 // bpm. Simple get/set wrapper – no transactions spanning multiple keys.
+//
+// SPEC.md increment 7, section A/B: the groove library and routine library
+// are each stored as ONE MORE KEY in this SAME store — a JSON-serialisable
+// array of entries under "grooveLibrary" / "routineLibrary" respectively,
+// read/written whole via the existing dbGet/dbSet. This is a deliberate
+// choice over adding two brand-new IndexedDB object stores (which would
+// need a DB_VERSION bump + an onupgradeneeded migration): for a personal
+// practice tool with realistically dozens, not thousands, of saved grooves/
+// routines, "one key holding a small array" is simplest-correct and avoids
+// any migration risk to the existing "settings" store's other keys. The
+// notation size control (section C) is persisted the same way, as a plain
+// string under "notationSize".
 // =============================================================================
 
 const DB_NAME = "drum-trainer";
@@ -1438,6 +1699,14 @@ async function dbSet(key, value) {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+}
+
+// Simple id generator for library entries — crypto.randomUUID() is
+// available in every browser this app already requires (Web MIDI/Web Audio
+// need a secure context — HTTPS or localhost — which is exactly what
+// randomUUID() also needs).
+function newId() {
+  return crypto.randomUUID();
 }
 
 // =============================================================================
@@ -1509,16 +1778,51 @@ let scoredBarIndexes = new Set(); // bar indexes already scored (avoid re-scorin
 let consumedActualIndices = new Set();
 let runningTally = { "on-target": 0, early: 0, late: 0, miss: 0, extra: 0 };
 
+// Live hit markers (SPEC.md increment 7, section D / AC7): drawn the MOMENT
+// a MIDI hit lands, before scoreBar()'s classified ghost note exists for
+// that step — see drawLiveMarker/clearLiveMarker near renderNotation. Keyed
+// by barStep (0..STEPS_PER_BAR-1) so a later classified ghost note for the
+// same step can clear the pending marker first, rather than stacking two
+// circles on top of each other.
+let liveMarkerEls = new Map();
+
+// ---- Groove library / Routine builder state (SPEC.md increment 7) ----
+//
+// grooveLibrary: [{ id, name, groove: <groove.js serialized shape>, updatedAt }]
+// routineLibrary: [{ id, name, items, updatedAt }] (routine.js serialized shape)
+// Both persisted whole, as a single IndexedDB key each (see the "IndexedDB
+// persistence" section above for why no new object store was added).
+let grooveLibrary = [];
+let routineLibrary = [];
+
+// The routine currently open in the Routine Builder (SPEC.md section B) —
+// null id means "not yet saved". A routine's items reference LIBRARY
+// grooves BY ID (never a deep copy — SPEC.md's explicit "notes for the
+// coder"), so editing a saved groove changes what any routine using it
+// plays/shows next time, without the routine itself needing to change.
+let currentRoutine = createRoutine();
+let currentRoutineId = null;
+
+let notationSize = "L"; // "S" | "M" | "L" — persisted, default LARGE (SPEC.md section C)
+
 // ---- Test area state ----
-// Only one of `engine` (Groove mode) / `testEngine` (Test mode) runs at a
-// time – switching tabs while a transport is running stops it first (see
-// switchMode()), so handleMidiMessage only ever needs to feed whichever one
-// is currently active.
-let currentMode = "groove"; // "groove" | "test"
+// Only one of `engine` (Groove mode) / `testEngine` (Test mode) /
+// `routineEngine` (Routines mode) runs at a time – switching tabs while a
+// transport is running stops it first (see switchMode()), so
+// handleMidiMessage only ever needs to feed whichever one is currently
+// active.
+let currentMode = "groove"; // "groove" | "routines" | "test"
 let testEngine = null;
 let testBpm = 100;
 let testSubdivision = "eighth"; // key into testarea.js's SUBDIVISIONS
 let testRunningStats = createRunningStats();
+
+// ---- Routine playback state (SPEC.md increment 7, section B/C) ----
+let routineEngine = null;
+let routineRunToken = 0;
+let routineClickLog = []; // recent {absTime, meta} click events, for live-hit nearest-step matching
+let routineActiveItemIndex = null; // which routine.items index is CURRENTLY sounding (for re-rendering notation on change)
+const ROUTINE_CLICK_LOG_LIMIT = 64;
 
 // =============================================================================
 // DOM references
@@ -1584,9 +1888,37 @@ const elMeterReadoutGroove = document.getElementById("meter-readout-groove");
 
 // Mode tabs
 const elTabGroove = document.getElementById("tab-groove");
+const elTabRoutines = document.getElementById("tab-routines");
 const elTabTest = document.getElementById("tab-test");
 const elModePanelGroove = document.getElementById("mode-panel-groove");
+const elModePanelRoutines = document.getElementById("mode-panel-routines");
 const elModePanelTest = document.getElementById("mode-panel-test");
+
+// Notation size control (SPEC.md increment 7, section C)
+const elNotationSizeSelect = document.getElementById("notation-size-select");
+
+// Groove library (SPEC.md increment 7, section A)
+const elLibraryRows = document.getElementById("library-rows");
+const elLibraryEmpty = document.getElementById("library-empty");
+const elLibrarySaveName = document.getElementById("library-save-name");
+const elLibrarySaveBtn = document.getElementById("library-save-btn");
+
+// Routine library + builder (SPEC.md increment 7, section B)
+const elRoutineLibraryRows = document.getElementById("routine-library-rows");
+const elRoutineLibraryEmpty = document.getElementById("routine-library-empty");
+const elRoutineNameInput = document.getElementById("routine-name-input");
+const elRoutineSaveBtn = document.getElementById("routine-save-btn");
+const elRoutineNewBtn = document.getElementById("routine-new-btn");
+const elRoutineItemsRows = document.getElementById("routine-items-rows");
+const elRoutineAddGrooveSelect = document.getElementById("routine-add-groove-select");
+const elRoutineAddRepeats = document.getElementById("routine-add-repeats");
+const elRoutineAddBpm = document.getElementById("routine-add-bpm");
+const elRoutineAddItemBtn = document.getElementById("routine-add-item-btn");
+const elRoutineTransportBtn = document.getElementById("routine-transport-btn");
+const elRoutineDrillRepeatsInput = document.getElementById("routine-drill-repeats-input");
+const elRoutineDrillInfiniteCheckbox = document.getElementById("routine-drill-infinite-checkbox");
+const elRoutineStatus = document.getElementById("routine-status");
+const elRoutineNotationOutput = document.getElementById("routine-notation-output");
 
 // Test area
 const elTestBpmDisplay = document.getElementById("test-bpm-display");
@@ -1965,6 +2297,7 @@ elResetStaffLayoutBtn.addEventListener("click", () => {
 function renderAllNotation() {
   try { renderNotation(); } catch (err) { console.error("renderNotation() failed after staff-layout change:", err); }
   try { renderEditor(); } catch (err) { console.error("renderEditor() failed after staff-layout change:", err); }
+  try { renderRoutineNotation(); } catch (err) { console.error("renderRoutineNotation() failed after staff-layout change:", err); }
 }
 
 // =============================================================================
@@ -2041,6 +2374,10 @@ function handleMidiMessage(event) {
   if (engine && engine.isRunning && midiToAudioOffset !== null) {
     const audioTime = (event.timeStamp - midiToAudioOffset) / 1000;
     actualHits.push({ voice: unmapped ? null : voice, time: audioTime });
+    // Live hit marker (SPEC.md increment 7, AC7): draw the moment this hit
+    // lands, not gated on scoreBar()'s bar-boundary judging window.
+    const nearest = nearestExpectedStep(audioTime);
+    if (nearest) drawLiveMarker(nearest.step);
   }
 
   // Feed the Test area if IT is the one running. Every hit counts here
@@ -2050,6 +2387,14 @@ function handleMidiMessage(event) {
   if (testEngine && testEngine.isRunning && midiToAudioOffset !== null) {
     const audioTime = (event.timeStamp - midiToAudioOffset) / 1000;
     handleTestHit(audioTime, unmapped ? null : voice);
+  }
+
+  // Feed Routine playback's live hit marker (SPEC.md increment 7, AC7) —
+  // presence + position only, same as the Groove practice view; routines
+  // don't have scoring wired up yet (inc 8), so this is the only feedback.
+  if (routineEngine && routineEngine.isRunning && midiToAudioOffset !== null) {
+    const audioTime = (event.timeStamp - midiToAudioOffset) / 1000;
+    handleRoutineHit(audioTime);
   }
 }
 
@@ -2104,6 +2449,63 @@ async function initMidi() {
 // original hard-coded groove exactly.
 const NOTE_DURATION = { quarter: "q", eighth: "8", sixteenth: "16" };
 
+// =============================================================================
+// Notation scale + full-width row layout (SPEC.md increment 7, section C)
+//
+// Kills the inc-6 "can't see across" clipping bug: the practice view, the
+// editor, and the Test staff all use the FULL available window width and
+// render LARGE by default, with a persisted S/M/L size control. Long charts
+// wrap into full-width systems (lines) rather than squeezing bars together
+// or relying on horizontal scroll.
+//
+// Scaling approach: VexFlow's own SVGContext.scale(sx, sy) (confirmed by
+// reading vexflow's own source) sets a VIEWBOX on the rendered <svg> —
+// renderer.resize(w, h) sets its physical width/height (CSS pixels), then
+// context.scale(s, s) sets viewBox="0 0 w/s h/s". This means every drawing
+// call — VexFlow's own AND this app's own hand-drawn SVG overlays (ghost
+// notes, playhead, editor noteheads, grid guides) — can keep using the SAME
+// logical coordinates as before scaling existed (stave.getYForLine(), a
+// StaveNote's getAbsoluteX(), etc all return logical units, unaffected by
+// the viewBox); the BROWSER stretches the whole viewBox uniformly to fill
+// the declared physical size. This is "scale the render context" rather
+// than a CSS transform hack, and it needs ZERO changes to any of the
+// existing logical-coordinate drawing code below — the ONLY place that
+// needs to account for scale is a raw pointer-click handler, which must
+// divide the physical click offset by the current scale to get back to
+// logical coordinates (see renderEditor's click listener).
+//
+// NOTATION_SCALE and the row-wrap layout maths (computeBarLayout) are pure
+// (zero DOM/VexFlow) and live in notationlayout.js so they're headless-
+// testable — see test-notationlayout.mjs. Only the genuinely DOM/VexFlow-
+// dependent pieces (creating a real renderer, reading a real element's
+// clientWidth) stay here.
+
+function currentNotationScale() {
+  return NOTATION_SCALE[notationSize] || NOTATION_SCALE.L;
+}
+
+// Creates a VexFlow renderer/context sized so the FINAL PHYSICAL size is
+// logicalWidth*scale x logicalHeight*scale, while every draw call after
+// this still works in logicalWidth x logicalHeight coordinates.
+function renderWithScale(container, logicalWidth, logicalHeight, scale) {
+  const renderer = new VexFlow.Renderer(container, VexFlow.Renderer.Backends.SVG);
+  renderer.resize(logicalWidth * scale, logicalHeight * scale);
+  const context = renderer.getContext();
+  context.scale(scale, scale);
+  return { renderer, context };
+}
+
+// Logical container width available to a notation surface: the panel's own
+// current physical clientWidth (the FULL window width now that the
+// #notation-output/#editor-output/#test-staff-output panels have no
+// max-width cap — see the CSS), converted to LOGICAL units by dividing out
+// the current scale, with a sane fallback if the panel isn't laid out yet
+// (e.g. its mode tab isn't active, so clientWidth reads 0).
+function logicalContainerWidth(el, scale) {
+  const physical = el.clientWidth || (window.innerWidth - 48);
+  return Math.max(340, physical / scale);
+}
+
 let staveNotes = [];  // one VexFlow tickable per absolute grid step (note or rest)
 let vexRenderer = null;
 let vexContext = null;
@@ -2144,23 +2546,22 @@ function renderNotation() {
 
   try {
     const ts = practiceGroove.timeSignature;
-    const containerWidth = Math.max(340, Math.min(600, elNotationOutput.clientWidth || 600));
-    const barWidth = practiceGroove.bars > 1 ? 150 : containerWidth - 20;
-    const staveY = 30;
-    const totalWidth = 10 + barWidth * practiceGroove.bars + 10;
+    const scale = currentNotationScale();
+    const containerWidthLogical = logicalContainerWidth(elNotationOutput, scale);
+    const barWidth = practiceGroove.bars > 1 ? 150 : containerWidthLogical - 20;
+    const layout = computeBarLayout(practiceGroove.bars, barWidth, containerWidthLogical);
 
-    vexRenderer = new VexFlow.Renderer(elNotationOutput, VexFlow.Renderer.Backends.SVG);
-    vexRenderer.resize(totalWidth, 180);
-    vexContext = vexRenderer.getContext();
+    const rendered = renderWithScale(elNotationOutput, layout.totalWidth, layout.totalHeight, scale);
+    vexRenderer = rendered.renderer;
+    vexContext = rendered.context;
 
     vexStaves = [];
-    let x = 10;
     for (let bar = 0; bar < practiceGroove.bars; bar++) {
-      const stave = new VexFlow.Stave(x, staveY, barWidth);
+      const { x, y } = layout.positions[bar];
+      const stave = new VexFlow.Stave(x, y, barWidth);
       if (bar === 0) stave.addClef("percussion").setTimeSignature(`${ts.beatsPerBar}/${ts.beatValue}`);
       stave.setContext(vexContext).draw();
       vexStaves.push(stave);
-      x += stave.getWidth();
     }
     vexStave = vexStaves[0];
 
@@ -2264,12 +2665,80 @@ let ghostEls = [];
 function clearGhostNotes() {
   for (const el of ghostEls) el.remove();
   ghostEls = [];
+  clearLiveMarkers();
+}
+
+// ---- Live hit markers (SPEC.md increment 7, section D / AC7) ----
+//
+// Drawn the INSTANT a MIDI hit lands — before scoreBar()'s own classified
+// ghost note exists for that step (scoreBar only runs once a bar's judging
+// window has closed, see its own header comment further down) — this is
+// the fix for James's inc-6 feedback ("hit timing currently only appears
+// after a round completes"). Presence + position only (SPEC.md PO call): no
+// early/late classification here — that's drawGhostNote's job once scoring
+// actually runs for this step; full early/late semantics stay inc 8's job,
+// this round only proves a hit landed and roughly where. Keyed by step so a
+// later classified ghost note for the SAME step replaces the pending
+// marker rather than stacking two circles on top of each other.
+const LIVE_MARKER_RADIUS = 4.5;
+
+function clearLiveMarkers() {
+  for (const el of liveMarkerEls.values()) el.remove();
+  liveMarkerEls.clear();
+}
+
+function clearLiveMarker(step) {
+  const el = liveMarkerEls.get(step);
+  if (el) {
+    el.remove();
+    liveMarkerEls.delete(step);
+  }
+}
+
+function drawLiveMarker(step) {
+  const svg = elNotationOutput.querySelector("svg");
+  const note = staveNotes[step];
+  if (!svg || !note) return;
+  clearLiveMarker(step); // replace any earlier pending marker for this step, don't stack
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", note.getAbsoluteX());
+  circle.setAttribute("cy", note.getYs()[0]);
+  circle.setAttribute("r", String(LIVE_MARKER_RADIUS));
+  circle.setAttribute("fill", "var(--accent)");
+  circle.setAttribute("fill-opacity", "0.55");
+  circle.setAttribute("stroke", "var(--bg)");
+  circle.setAttribute("stroke-width", "1");
+  svg.appendChild(circle);
+  liveMarkerEls.set(step, circle);
+}
+
+// Finds the expectedHits entry (any voice) whose scheduled time is nearest
+// the given audio-clock hit time — "where in the bar it hit" (SPEC.md
+// section D), at the same per-STEP (not per-voice) granularity
+// drawGhostNote already uses. Only searches the most recent entries (cheap,
+// and a run's expectedHits only ever grows).
+const LIVE_MARKER_SEARCH_WINDOW = 64;
+
+function nearestExpectedStep(audioTime) {
+  let best = null;
+  let bestDelta = Infinity;
+  const from = Math.max(0, expectedHits.length - LIVE_MARKER_SEARCH_WINDOW);
+  for (let i = from; i < expectedHits.length; i++) {
+    const delta = Math.abs(expectedHits[i].time - audioTime);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = expectedHits[i];
+    }
+  }
+  return best;
 }
 
 function drawGhostNote(step, classification, direction) {
   const svg = elNotationOutput.querySelector("svg");
   const note = staveNotes[step];
   if (!svg || !note) return;
+  clearLiveMarker(step); // the classified ghost note replaces the live pending marker for this step
 
   const color = classification === "on-target" ? "var(--good)" : classification === "miss" ? "var(--miss)" : "var(--late)";
   const x = note.getAbsoluteX() + (direction === "early" ? -GHOST_NUDGE_PX : direction === "late" ? GHOST_NUDGE_PX : 0);
@@ -2329,22 +2798,25 @@ function renderEditor() {
   try {
     const ts = editorGroove.timeSignature;
     editorStepsPerBar = grooveStepsPerBar(editorGroove);
+    const editorScale = currentNotationScale();
+    const containerWidthLogical = logicalContainerWidth(elEditorOutput, editorScale);
     const barWidth = 150;
-    const staveY = 30;
-    const totalWidth = 10 + barWidth * editorGroove.bars + 10;
+    const layout = computeBarLayout(editorGroove.bars, barWidth, containerWidthLogical);
 
-    const renderer = new VexFlow.Renderer(elEditorOutput, VexFlow.Renderer.Backends.SVG);
-    renderer.resize(totalWidth, 170);
-    const context = renderer.getContext();
+    const rendered = renderWithScale(elEditorOutput, layout.totalWidth, layout.totalHeight, editorScale);
+    const context = rendered.context;
 
-    let x = 10;
     for (let i = 0; i < editorGroove.bars; i++) {
-      const stave = new VexFlow.Stave(x, staveY, barWidth);
+      const { x, y } = layout.positions[i];
+      const stave = new VexFlow.Stave(x, y, barWidth);
       if (i === 0) stave.addClef("percussion").setTimeSignature(`${ts.beatsPerBar}/${ts.beatValue}`);
       stave.setContext(context).draw();
       editorStaves.push(stave);
-      editorBarGeometries.push({ noteStartX: stave.getNoteStartX(), noteEndX: stave.getNoteEndX() });
-      x += stave.getWidth();
+      // rowTopLineY (SPEC.md increment 7 row-wrapping): each bar's OWN
+      // getYForLine(0), not just a single shared value — editorhit.js's
+      // hitTest/drawXY use this to hit-test/draw against whichever ROW a
+      // bar actually landed on once the chart wraps across multiple lines.
+      editorBarGeometries.push({ noteStartX: stave.getNoteStartX(), noteEndX: stave.getNoteEndX(), rowTopLineY: stave.getYForLine(0) });
     }
 
     editorStaffGeometry = {
@@ -2427,7 +2899,12 @@ elEditorOutput.addEventListener("click", (e) => {
   const svg = elEditorOutput.querySelector("svg");
   if (!svg || !editorStaffGeometry || editorBarGeometries.length === 0) return;
   const rect = svg.getBoundingClientRect();
-  const point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  // The click lands in PHYSICAL pixels (the svg's actual on-screen size,
+  // which is logicalSize*scale — see renderWithScale's header comment);
+  // editorBarGeometries/editorStaffGeometry are in LOGICAL units, so divide
+  // the click back down by the current scale before hit-testing.
+  const scale = currentNotationScale();
+  const point = { x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale };
   const hit = editorHitTest(staffLayout, point, {
     stepsPerBar: editorStepsPerBar,
     barGeometries: editorBarGeometries,
@@ -2527,6 +3004,110 @@ elEditorClearBtn.addEventListener("click", () => {
     })
   );
   elPresetSelect.value = "";
+});
+
+// =============================================================================
+// Groove library (SPEC.md increment 7, section A)
+//
+// Save the CURRENT editor groove under a name; load/rename/duplicate/delete
+// from the saved list. Overwrite-on-save-same-name asks for confirmation
+// first (AC1). Presets stay read-only seeds — "save a copy to library" is
+// just this same Save action, since loading a preset already populates
+// editorGroove exactly like loading a library groove does.
+// =============================================================================
+
+function persistGrooveLibrary() {
+  return dbSet("grooveLibrary", grooveLibrary.map((e) => ({ ...e, groove: grooveSerialize(e.groove) })));
+}
+
+// Builds a { id: { name, groove } } lookup for routine.js's expandRoutine()
+// and for populating the routine item "which groove" <select>.
+function grooveLibraryById() {
+  const byId = {};
+  for (const entry of grooveLibrary) byId[entry.id] = { name: entry.name, groove: entry.groove };
+  return byId;
+}
+
+function renderLibraryPanel() {
+  elLibraryRows.innerHTML = "";
+  elLibraryEmpty.style.display = grooveLibrary.length === 0 ? "block" : "none";
+
+  grooveLibrary.forEach((entry, index) => {
+    const row = document.createElement("div");
+    row.className = "library-row";
+
+    const name = document.createElement("span");
+    name.textContent = entry.name;
+
+    const loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.textContent = "Load";
+    loadBtn.addEventListener("click", () => {
+      applyEditorGroove(entry.groove, { syncControls: true });
+      elPresetSelect.value = "";
+      elLibrarySaveName.value = entry.name;
+    });
+
+    const renameBtn = document.createElement("button");
+    renameBtn.type = "button";
+    renameBtn.textContent = "Rename";
+    renameBtn.addEventListener("click", () => {
+      const next = prompt("Rename groove:", entry.name);
+      if (next === null) return; // cancelled
+      const trimmed = next.trim();
+      if (!trimmed) return;
+      grooveLibrary = grooveLibrary.map((e, i) => (i === index ? { ...e, name: trimmed, updatedAt: Date.now() } : e));
+      persistGrooveLibrary().catch((err) => console.error("Failed to persist groove library:", err));
+      renderLibraryPanel();
+      renderRoutineAddGrooveSelect();
+      renderRoutineItemsPanel();
+    });
+
+    const dupBtn = document.createElement("button");
+    dupBtn.type = "button";
+    dupBtn.textContent = "Duplicate";
+    dupBtn.addEventListener("click", () => {
+      const copy = { id: newId(), name: `${entry.name} copy`, groove: JSON.parse(JSON.stringify(entry.groove)), updatedAt: Date.now() };
+      grooveLibrary = [...grooveLibrary, copy];
+      persistGrooveLibrary().catch((err) => console.error("Failed to persist groove library:", err));
+      renderLibraryPanel();
+      renderRoutineAddGrooveSelect();
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "library-delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => {
+      if (!confirm(`Delete "${entry.name}" from the groove library? Any routine items using it will stop working until you pick a different groove.`)) return;
+      grooveLibrary = grooveLibrary.filter((_, i) => i !== index);
+      persistGrooveLibrary().catch((err) => console.error("Failed to persist groove library:", err));
+      renderLibraryPanel();
+      renderRoutineAddGrooveSelect();
+      renderRoutineItemsPanel();
+    });
+
+    row.append(name, loadBtn, renameBtn, dupBtn, deleteBtn);
+    elLibraryRows.appendChild(row);
+  });
+}
+
+elLibrarySaveBtn.addEventListener("click", () => {
+  const name = elLibrarySaveName.value.trim();
+  if (!name) return;
+  const existingIndex = grooveLibrary.findIndex((e) => e.name === name);
+  if (existingIndex !== -1) {
+    if (!confirm(`A groove named "${name}" already exists in the library. Overwrite it?`)) return;
+    grooveLibrary = grooveLibrary.map((e, i) =>
+      i === existingIndex ? { ...e, groove: JSON.parse(JSON.stringify(editorGroove)), updatedAt: Date.now() } : e
+    );
+  } else {
+    grooveLibrary = [...grooveLibrary, { id: newId(), name, groove: JSON.parse(JSON.stringify(editorGroove)), updatedAt: Date.now() }];
+  }
+  persistGrooveLibrary().catch((err) => console.error("Failed to persist groove library:", err));
+  renderLibraryPanel();
+  renderRoutineAddGrooveSelect();
+  renderRoutineItemsPanel();
 });
 
 // =============================================================================
@@ -2809,22 +3390,21 @@ function renderTestStaffPage(page) {
 
   try {
     const barWidth = 90;
-    const staveY = 30;
-    const totalWidth = 10 + barWidth * VISIBLE_BARS + 10;
+    const scale = currentNotationScale();
+    const containerWidthLogical = logicalContainerWidth(elTestStaffOutput, scale);
+    const layout = computeBarLayout(VISIBLE_BARS, barWidth, containerWidthLogical);
 
-    const renderer = new VexFlow.Renderer(elTestStaffOutput, VexFlow.Renderer.Backends.SVG);
-    renderer.resize(totalWidth, 180);
-    const context = renderer.getContext();
+    const rendered = renderWithScale(elTestStaffOutput, layout.totalWidth, layout.totalHeight, scale);
+    const context = rendered.context;
 
-    let x = 10;
     for (let i = 0; i < VISIBLE_BARS; i++) {
-      const stave = new VexFlow.Stave(x, staveY, barWidth);
+      const { x, y } = layout.positions[i];
+      const stave = new VexFlow.Stave(x, y, barWidth);
       if (i === 0) {
         stave.addClef("percussion").setTimeSignature("4/4");
       }
       stave.setContext(context).draw();
       testStaves.push(stave);
-      x += stave.getWidth();
     }
 
     elTestStaffPage.textContent = `Page ${page + 1}`;
@@ -3299,6 +3879,656 @@ function toggleTransport() {
 elTransportBtn.addEventListener("click", toggleTransport);
 
 // =============================================================================
+// Routine library + builder (SPEC.md increment 7, section B)
+//
+// A routine = name + ordered items (library groove + repeats + its own
+// BPM) — routine.js is the pure model; this section is the DOM glue: save/
+// load/rename/duplicate/delete routines, build/edit the current routine's
+// item list, and play it through (RoutineEngine, below) or drill a single
+// item (reusing PracticeEngine, since one item is just one groove at one
+// constant tempo — no tempo-boundary complexity within a single item).
+// =============================================================================
+
+function persistRoutineLibrary() {
+  return dbSet("routineLibrary", routineLibrary.map((e) => ({ ...e, ...routineSerialize(e) })));
+}
+
+function renderRoutineLibraryPanel() {
+  elRoutineLibraryRows.innerHTML = "";
+  elRoutineLibraryEmpty.style.display = routineLibrary.length === 0 ? "block" : "none";
+
+  routineLibrary.forEach((entry, index) => {
+    const row = document.createElement("div");
+    row.className = "library-row";
+
+    const name = document.createElement("span");
+    name.textContent = entry.name;
+
+    const loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.textContent = "Load";
+    loadBtn.addEventListener("click", () => {
+      currentRoutine = routineDeserialize(entry);
+      currentRoutineId = entry.id;
+      elRoutineNameInput.value = currentRoutine.name;
+      renderRoutineItemsPanel();
+    });
+
+    const renameBtn = document.createElement("button");
+    renameBtn.type = "button";
+    renameBtn.textContent = "Rename";
+    renameBtn.addEventListener("click", () => {
+      const next = prompt("Rename routine:", entry.name);
+      if (next === null) return;
+      const trimmed = next.trim();
+      if (!trimmed) return;
+      routineLibrary = routineLibrary.map((e, i) => (i === index ? { ...e, name: trimmed, updatedAt: Date.now() } : e));
+      if (currentRoutineId === entry.id) {
+        currentRoutine = routineSetName(currentRoutine, trimmed);
+        elRoutineNameInput.value = trimmed;
+      }
+      persistRoutineLibrary().catch((err) => console.error("Failed to persist routine library:", err));
+      renderRoutineLibraryPanel();
+    });
+
+    const dupBtn = document.createElement("button");
+    dupBtn.type = "button";
+    dupBtn.textContent = "Duplicate";
+    dupBtn.addEventListener("click", () => {
+      const copy = { id: newId(), name: `${entry.name} copy`, items: JSON.parse(JSON.stringify(entry.items)), updatedAt: Date.now() };
+      routineLibrary = [...routineLibrary, copy];
+      persistRoutineLibrary().catch((err) => console.error("Failed to persist routine library:", err));
+      renderRoutineLibraryPanel();
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "library-delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => {
+      if (!confirm(`Delete routine "${entry.name}"?`)) return;
+      routineLibrary = routineLibrary.filter((_, i) => i !== index);
+      if (currentRoutineId === entry.id) {
+        currentRoutine = createRoutine();
+        currentRoutineId = null;
+        elRoutineNameInput.value = "";
+        renderRoutineItemsPanel();
+      }
+      persistRoutineLibrary().catch((err) => console.error("Failed to persist routine library:", err));
+      renderRoutineLibraryPanel();
+    });
+
+    row.append(name, loadBtn, renameBtn, dupBtn, deleteBtn);
+    elRoutineLibraryRows.appendChild(row);
+  });
+}
+
+elRoutineSaveBtn.addEventListener("click", () => {
+  const name = elRoutineNameInput.value.trim();
+  if (!name) return;
+  currentRoutine = routineSetName(currentRoutine, name);
+  const serialized = routineSerialize(currentRoutine);
+
+  // Matches groove save's behaviour exactly (code-review fix): match/
+  // overwrite purely by NAME, so ANY name collision confirms before
+  // overwriting — whether or not a routine is currently loaded. The
+  // previous id-first lookup skipped the confirm whenever currentRoutineId
+  // was set, which let RENAMING a loaded routine to collide with a
+  // DIFFERENT saved routine's name silently overwrite it with no warning.
+  const existingIndex = routineLibrary.findIndex((e) => e.name === name);
+  if (existingIndex !== -1) {
+    if (!confirm(`A routine named "${name}" already exists. Overwrite it?`)) return;
+    currentRoutineId = routineLibrary[existingIndex].id;
+    routineLibrary = routineLibrary.map((e, i) => (i === existingIndex ? { id: e.id, ...serialized, updatedAt: Date.now() } : e));
+  } else {
+    currentRoutineId = newId();
+    routineLibrary = [...routineLibrary, { id: currentRoutineId, ...serialized, updatedAt: Date.now() }];
+  }
+  persistRoutineLibrary().catch((err) => console.error("Failed to persist routine library:", err));
+  renderRoutineLibraryPanel();
+});
+
+elRoutineNewBtn.addEventListener("click", () => {
+  currentRoutine = createRoutine();
+  currentRoutineId = null;
+  elRoutineNameInput.value = "";
+  renderRoutineItemsPanel();
+});
+
+// The "add item" groove <select> — populated from the groove library. If
+// the library is empty there is nothing to add yet (the option list stays
+// just the placeholder and Add Item is a no-op).
+function renderRoutineAddGrooveSelect() {
+  const previous = elRoutineAddGrooveSelect.value;
+  elRoutineAddGrooveSelect.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = grooveLibrary.length === 0 ? "— save a groove to the library first —" : "— choose a groove —";
+  elRoutineAddGrooveSelect.appendChild(placeholder);
+  for (const entry of grooveLibrary) {
+    const opt = document.createElement("option");
+    opt.value = entry.id;
+    opt.textContent = entry.name;
+    elRoutineAddGrooveSelect.appendChild(opt);
+  }
+  if (grooveLibrary.some((e) => e.id === previous)) elRoutineAddGrooveSelect.value = previous;
+}
+
+// Same groove-name <select> options, reused inside each item row so a
+// routine item's groove can be changed after the fact.
+function populateGrooveSelect(selectEl, currentGrooveId) {
+  selectEl.innerHTML = "";
+  // Code-review fix: if the item's referenced groove was deleted from the
+  // library, no real <option> below matches currentGrooveId — without this
+  // placeholder the <select> would just show its FIRST option selected,
+  // looking exactly like the item had silently repointed to that groove
+  // (it hasn't; drill/playback already skip it gracefully, but the UI must
+  // say so rather than imply a groove that isn't actually there).
+  if (currentGrooveId && !grooveLibrary.some((e) => e.id === currentGrooveId)) {
+    const missing = document.createElement("option");
+    missing.value = currentGrooveId;
+    missing.textContent = "(missing groove)";
+    missing.selected = true;
+    selectEl.appendChild(missing);
+  }
+  for (const entry of grooveLibrary) {
+    const opt = document.createElement("option");
+    opt.value = entry.id;
+    opt.textContent = entry.name;
+    if (entry.id === currentGrooveId) opt.selected = true;
+    selectEl.appendChild(opt);
+  }
+}
+
+function renderRoutineItemsPanel() {
+  elRoutineItemsRows.innerHTML = "";
+  currentRoutine.items.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "routine-item-row";
+
+    const grooveSelect = document.createElement("select");
+    populateGrooveSelect(grooveSelect, item.grooveId);
+    grooveSelect.addEventListener("change", () => {
+      currentRoutine = routineUpdateItem(currentRoutine, index, { grooveId: grooveSelect.value });
+    });
+
+    const repeatsInput = document.createElement("input");
+    repeatsInput.type = "number";
+    repeatsInput.min = String(MIN_ITEM_REPEATS);
+    repeatsInput.max = String(MAX_ITEM_REPEATS);
+    repeatsInput.value = String(item.repeats);
+    repeatsInput.addEventListener("change", () => {
+      const v = parseInt(repeatsInput.value, 10);
+      const next = routineUpdateItem(currentRoutine, index, { repeats: v });
+      if (next === currentRoutine) { repeatsInput.value = String(item.repeats); return; }
+      currentRoutine = next;
+    });
+
+    const bpmInput = document.createElement("input");
+    bpmInput.type = "number";
+    bpmInput.min = "30";
+    bpmInput.max = "300";
+    bpmInput.value = String(item.bpm);
+    bpmInput.addEventListener("change", () => {
+      const v = parseInt(bpmInput.value, 10);
+      const next = routineUpdateItem(currentRoutine, index, { bpm: v });
+      if (next === currentRoutine) { bpmInput.value = String(item.bpm); return; }
+      currentRoutine = next;
+    });
+
+    const upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.textContent = "↑";
+    upBtn.addEventListener("click", () => {
+      currentRoutine = routineMoveItemUp(currentRoutine, index);
+      renderRoutineItemsPanel();
+    });
+
+    const downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.textContent = "↓";
+    downBtn.addEventListener("click", () => {
+      currentRoutine = routineMoveItemDown(currentRoutine, index);
+      renderRoutineItemsPanel();
+    });
+
+    const drillBtn = document.createElement("button");
+    drillBtn.type = "button";
+    drillBtn.textContent = "Drill";
+    drillBtn.addEventListener("click", () => startRoutineItemDrill(index));
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => {
+      currentRoutine = routineRemoveItem(currentRoutine, index);
+      renderRoutineItemsPanel();
+    });
+
+    row.append(grooveSelect, repeatsInput, bpmInput, upBtn, downBtn, drillBtn, removeBtn);
+    elRoutineItemsRows.appendChild(row);
+  });
+}
+
+elRoutineAddItemBtn.addEventListener("click", () => {
+  const grooveId = elRoutineAddGrooveSelect.value;
+  if (!grooveId) return;
+  const repeats = parseInt(elRoutineAddRepeats.value, 10);
+  const bpm = parseInt(elRoutineAddBpm.value, 10);
+  const next = routineAddItem(currentRoutine, { grooveId, repeats, bpm });
+  if (next === currentRoutine) return;
+  currentRoutine = next;
+  renderRoutineItemsPanel();
+});
+
+// =============================================================================
+// RoutineEngine (SPEC.md increment 7, section B/C)
+//
+// Plays a routine's FULL expanded timeline (routine.js's expandRoutine()) —
+// items in order, honouring repeats, switching tempo cleanly at item
+// boundaries. Unlike PracticeEngine (a single constant bpm/steps-per-bar for
+// the whole run), the whole click plan is precomputed ONCE at start via
+// routineschedule.js's buildClickPlan() — see that module's header for why
+// this is the gapless/no-stutter approach to a mid-run tempo change (the
+// "risky Web Audio seam" SPEC.md flags). Drift-free within a run: every
+// click's absolute AudioContext time is runStartTime + that click's own
+// PRECOMPUTED relTime, never accumulated step-by-step against a changing
+// rate.
+// =============================================================================
+
+class RoutineEngine {
+  #ctx;
+  #lookahead;
+  #tickInterval;
+  #plan; // buildClickPlan() output
+  #onClick; // fn(planIndex, scheduledTime, entry)
+  #onDone; // fn(lastScheduledTime) — fired once, mirrors PracticeEngine's onArrangementDone
+
+  #running = false;
+  #tickerId = null;
+  #startTime = 0;
+  #nextIndex = 0;
+  #doneNotified = false;
+
+  constructor({ audioContext, plan, lookahead = 0.1, tickInterval = 25, onClick, onDone } = {}) {
+    if (!audioContext) throw new Error("RoutineEngine: audioContext is required");
+    this.#ctx = audioContext;
+    this.#plan = Array.isArray(plan) ? plan : [];
+    this.#lookahead = lookahead;
+    this.#tickInterval = tickInterval;
+    this.#onClick = typeof onClick === "function" ? onClick : () => {};
+    this.#onDone = typeof onDone === "function" ? onDone : () => {};
+  }
+
+  get isRunning() { return this.#running; }
+
+  start() {
+    if (this.#running) return;
+    this.#running = true;
+    this.#nextIndex = 0;
+    this.#doneNotified = false;
+    this.#startTime = this.#ctx.currentTime + 0.05;
+    this.#tick();
+    this.#tickerId = setInterval(() => this.#tick(), this.#tickInterval);
+  }
+
+  stop() {
+    if (!this.#running) return;
+    this.#running = false;
+    clearInterval(this.#tickerId);
+    this.#tickerId = null;
+  }
+
+  #tick() {
+    if (!this.#running) return;
+    const horizon = this.#ctx.currentTime + this.#lookahead;
+    while (this.#nextIndex < this.#plan.length) {
+      const entry = this.#plan[this.#nextIndex];
+      const scheduledTime = this.#startTime + entry.relTime;
+      if (scheduledTime > horizon) break;
+      this.#onClick(this.#nextIndex, scheduledTime, entry);
+      this.#nextIndex++;
+    }
+    if (this.#nextIndex >= this.#plan.length && !this.#doneNotified && this.#plan.length > 0) {
+      this.#doneNotified = true;
+      const last = this.#plan[this.#plan.length - 1];
+      this.#onDone(this.#startTime + last.relTime);
+    }
+  }
+}
+
+window.RoutineEngine = RoutineEngine;
+
+// Builds the RoutineEngine click plan for the routine's FULL expanded
+// timeline: one bar spec per expandRoutine() entry, with a 1-bar count-in
+// at the FIRST item's own bpm/steps-per-bar prepended (matching
+// PracticeEngine's existing 1-bar count-in convention).
+function buildRoutineBarSpecs(entries, grooveById) {
+  const specs = [];
+  if (entries.length > 0) {
+    const first = entries[0];
+    const firstGroove = grooveById[first.grooveId]?.groove;
+    const stepsPerBar = firstGroove ? grooveStepsPerBar(firstGroove) : STEPS_PER_BAR;
+    const stepsPerBeat = firstGroove ? SUBDIVISIONS[firstGroove.subdivision] || 2 : 2;
+    specs.push({ stepsPerBar, secondsPerStep: secondsPerStepForBpm(first.bpm, stepsPerBeat), meta: { isCountIn: true } });
+  }
+  for (const entry of entries) {
+    const groove = grooveById[entry.grooveId]?.groove;
+    const stepsPerBar = groove ? grooveStepsPerBar(groove) : STEPS_PER_BAR;
+    const stepsPerBeat = groove ? SUBDIVISIONS[groove.subdivision] || 2 : 2;
+    specs.push({ stepsPerBar, secondsPerStep: secondsPerStepForBpm(entry.bpm, stepsPerBeat), meta: entry });
+  }
+  return specs;
+}
+
+function stopRoutineTransport() {
+  if (routineEngine) {
+    routineEngine.stop();
+    routineEngine = null;
+  }
+  midiToAudioOffset = null;
+  elRoutineTransportBtn.classList.remove("running");
+  elRoutineTransportBtn.setAttribute("aria-label", "Start");
+  elRoutineTransportBtn.innerHTML = "&#x25B6;";
+  elRoutineStatus.textContent = "Stopped";
+  routineActiveItemIndex = null;
+  routineClickLog = [];
+  renderRoutineNotation();
+}
+
+function startRoutineTransport() {
+  routineRunToken++;
+  ensureAudioContext();
+
+  const grooveById = grooveLibraryById();
+  const entries = expandRoutine(currentRoutine, grooveById);
+  if (entries.length === 0) {
+    elRoutineStatus.textContent = "Add at least one item with a saved groove first.";
+    return;
+  }
+
+  const specs = buildRoutineBarSpecs(entries, grooveById);
+  const plan = buildClickPlan(specs);
+
+  midiToAudioOffset = performance.now() - audioCtx.currentTime * 1000;
+  routineClickLog = [];
+  routineActiveItemIndex = null;
+
+  routineEngine = new RoutineEngine({
+    audioContext: audioCtx,
+    plan,
+    onClick: (planIndex, scheduledTime, planEntry) => {
+      const delay = Math.max(0, (scheduledTime - audioCtx.currentTime) * 1000);
+      setTimeout(() => {
+        playClick(audioCtx, scheduledTime, planEntry.isAccent);
+        const meta = planEntry.meta;
+        if (meta?.isCountIn) {
+          elRoutineStatus.innerHTML = "Count-in…";
+          return;
+        }
+        routineClickLog.push({ absTime: scheduledTime, bar: meta.bar, step: planEntry.step, meta });
+        if (routineClickLog.length > ROUTINE_CLICK_LOG_LIMIT) routineClickLog.shift();
+
+        if (meta.itemIndex !== routineActiveItemIndex) {
+          routineActiveItemIndex = meta.itemIndex;
+          renderRoutineNotation();
+        }
+        elRoutineStatus.innerHTML =
+          `<span class="routine-status-item">${meta.grooveName ?? "Untitled"}</span> — repeat ${meta.itemRepeat}/${meta.itemRepeats} — ${meta.bpm} BPM` +
+          (meta.sectionName ? ` — ${meta.sectionName} (${meta.repeat}/${meta.repeats})` : "");
+      }, delay);
+    },
+    onDone: (lastScheduledTime) => {
+      const delay = Math.max(0, (lastScheduledTime - audioCtx.currentTime) * 1000);
+      const tokenAtArm = routineRunToken;
+      setTimeout(() => {
+        if (routineRunToken !== tokenAtArm) return;
+        stopRoutineTransport();
+      }, delay);
+    },
+  });
+  routineEngine.start();
+
+  elRoutineTransportBtn.classList.add("running");
+  elRoutineTransportBtn.setAttribute("aria-label", "Stop");
+  elRoutineTransportBtn.innerHTML = "&#x25A0;";
+  elRoutineStatus.textContent = "Count-in…";
+}
+
+function toggleRoutineTransport() {
+  if (routineEngine && routineEngine.isRunning) {
+    stopRoutineTransport();
+  } else {
+    startRoutineTransport();
+  }
+}
+
+elRoutineTransportBtn.addEventListener("click", toggleRoutineTransport);
+
+// ---- Drill a single routine item (SPEC.md AC4) ----
+//
+// One item is one groove at one constant tempo — no tempo-boundary
+// complexity — so this reuses PracticeEngine exactly the way the Groove
+// editor's own Drill mode already does (SPEC.md increment 6), just against
+// the ITEM's groove/bpm instead of editorGroove, and looped by the drill's
+// own xN/∞ controls (a routine ×99 hard cap would still need drilling
+// further, hence a separate playback-side multiplier here, same PO call as
+// increment 6's section drill vs stored-repeats distinction).
+function startRoutineItemDrill(itemIndex) {
+  const item = currentRoutine.items[itemIndex];
+  if (!item) return;
+  const libEntry = grooveLibrary.find((e) => e.id === item.grooveId);
+  if (!libEntry) {
+    elRoutineStatus.textContent = "That item's groove is no longer in the library.";
+    return;
+  }
+
+  routineRunToken++;
+  ensureAudioContext();
+  midiToAudioOffset = performance.now() - audioCtx.currentTime * 1000;
+  routineClickLog = [];
+  routineActiveItemIndex = itemIndex;
+  renderRoutineNotation();
+
+  const infinite = elRoutineDrillInfiniteCheckbox.checked;
+  const repeatsRaw = parseInt(elRoutineDrillRepeatsInput.value, 10);
+  const repeats = clamp(Number.isFinite(repeatsRaw) ? repeatsRaw : 1, MIN_ITEM_REPEATS, MAX_ITEM_REPEATS);
+  const onePass = grooveExpandArrangement(libEntry.groove);
+  const arrangement = infinite ? onePass : repeatArrangementNTimes(onePass, repeats);
+  const maxBars = infinite ? Infinity : arrangement.length;
+
+  routineEngine = new PracticeEngine({
+    audioContext: audioCtx,
+    maxBars,
+    onStep: (barStep, scheduledTime, isAccent, isCountIn, barIndex) => {
+      playClick(audioCtx, scheduledTime, isAccent);
+      const delay = Math.max(0, (scheduledTime - audioCtx.currentTime) * 1000);
+      setTimeout(() => {
+        if (isCountIn) {
+          elRoutineStatus.textContent = `Count-in… beat ${barStep + 1}`;
+          return;
+        }
+        const arrIdx = infinite ? (barIndex - 1) % arrangement.length : barIndex - 1;
+        const arrEntry = arrangement[arrIdx];
+        // meta.itemIndex must be set here too (matches the whole-routine
+        // playback path's meta shape) — handleRoutineHit filters
+        // routineClickLog by itemIndex to avoid matching stale pre-boundary
+        // clicks, so a drill-mode entry without it would never match.
+        routineClickLog.push({ absTime: scheduledTime, bar: arrEntry?.bar ?? 0, step: barStep, meta: { bar: arrEntry?.bar ?? 0, itemIndex } });
+        if (routineClickLog.length > ROUTINE_CLICK_LOG_LIMIT) routineClickLog.shift();
+        elRoutineStatus.innerHTML =
+          `<span class="routine-status-item">${libEntry.name}</span> — drilling ${infinite ? "(forever)" : `bar ${barIndex}/${maxBars}`} — ${item.bpm} BPM` +
+          (arrEntry?.sectionName ? ` — ${arrEntry.sectionName} (${arrEntry.repeat}/${arrEntry.repeats})` : "");
+      }, delay);
+    },
+    onArrangementDone: (lastScheduledTime) => {
+      const delay = Math.max(0, (lastScheduledTime - audioCtx.currentTime) * 1000);
+      const tokenAtArm = routineRunToken;
+      setTimeout(() => {
+        if (routineRunToken !== tokenAtArm) return;
+        stopRoutineTransport();
+      }, delay);
+    },
+  });
+  routineEngine.setBpm(item.bpm);
+  routineEngine.start();
+
+  elRoutineTransportBtn.classList.add("running");
+  elRoutineStatus.textContent = "Count-in…";
+}
+
+// Repeats a groove's own expanded arrangement N times back-to-back — the
+// drill's OWN playback-side multiplier (SPEC.md increment 6 PO call: a
+// drill's xN is independent of the groove's/section's own stored repeats).
+function repeatArrangementNTimes(arrangement, times) {
+  const out = [];
+  for (let i = 0; i < times; i++) out.push(...arrangement);
+  return out;
+}
+
+// ---- Notation for whichever item is currently active (SPEC.md section C/D) ----
+//
+// Renders the ACTIVE item's groove (routineActiveItemIndex) as a full-
+// width/LARGE staff — same computeBarLayout/renderWithScale approach as
+// renderNotation()/renderEditor() — and tracks its own staveNotes[] so live
+// hits (handleRoutineHit, below) can draw a marker on it immediately,
+// reusing the SAME drawLiveMarker-style approach as the Groove practice
+// view (SPEC.md's explicit "reuse the inc-3 rolling Test staff approach").
+let routineStaveNotes = [];
+let routineVexStaves = [];
+// Keyed by absolute grid position (bar*stepsPerBar+step), same pattern as
+// the Groove practice view's liveMarkerEls Map (SPEC.md code-review fix):
+// a plain array here would append one permanent DOM node per hit for the
+// whole session — a real leak during a "loop forever" drill or a long
+// multi-repeat item. Keying by position and replacing bounds this to at
+// most one marker per step, exactly like clearLiveMarker/drawLiveMarker.
+let routineLiveMarkerEls = new Map();
+
+function renderRoutineNotation() {
+  elRoutineNotationOutput.innerHTML = "";
+  routineStaveNotes = [];
+  routineVexStaves = [];
+  routineLiveMarkerEls.clear();
+
+  if (typeof VexFlow === "undefined") return;
+  if (routineActiveItemIndex === null) {
+    elRoutineNotationOutput.textContent = "Press play (or drill an item) to see notation here.";
+    return;
+  }
+  const item = currentRoutine.items[routineActiveItemIndex];
+  const libEntry = item ? grooveLibrary.find((e) => e.id === item.grooveId) : null;
+  if (!libEntry) return;
+  const groove = libEntry.groove;
+
+  try {
+    const ts = groove.timeSignature;
+    const scale = currentNotationScale();
+    const containerWidthLogical = logicalContainerWidth(elRoutineNotationOutput, scale);
+    const barWidth = groove.bars > 1 ? 150 : containerWidthLogical - 20;
+    const layout = computeBarLayout(groove.bars, barWidth, containerWidthLogical);
+
+    const rendered = renderWithScale(elRoutineNotationOutput, layout.totalWidth, layout.totalHeight, scale);
+    const context = rendered.context;
+
+    for (let bar = 0; bar < groove.bars; bar++) {
+      const { x, y } = layout.positions[bar];
+      const stave = new VexFlow.Stave(x, y, barWidth);
+      if (bar === 0) stave.addClef("percussion").setTimeSignature(`${ts.beatsPerBar}/${ts.beatValue}`);
+      stave.setContext(context).draw();
+      routineVexStaves.push(stave);
+    }
+
+    const dur = NOTE_DURATION[groove.subdivision] || "8";
+    const stepsPerBarCount = grooveStepsPerBar(groove);
+    const beams = [];
+
+    for (let bar = 0; bar < groove.bars; bar++) {
+      const barNotes = [];
+      for (let stepInBar = 0; stepInBar < stepsPerBarCount; stepInBar++) {
+        const step = bar * stepsPerBarCount + stepInBar;
+        const notesHere = grooveNotesAtPosition(groove, step)
+          .map((n) => ({ voice: n.voice, key: resolveNotehead(staffLayout, n.voice) }))
+          .filter((n) => n.key);
+        const keys = notesHere.map((n) => n.key);
+        const staveNote =
+          keys.length > 0
+            ? new VexFlow.StaveNote({ keys, duration: dur, stemDirection: -1 })
+            : new VexFlow.StaveNote({ keys: ["b/4"], duration: dur + "r" });
+        routineStaveNotes.push(staveNote);
+        barNotes.push(staveNote);
+      }
+      const voice = new VexFlow.Voice({ num_beats: ts.beatsPerBar, beat_value: ts.beatValue });
+      voice.addTickables(barNotes);
+      new VexFlow.Formatter().joinVoices([voice]).formatToStave([voice], routineVexStaves[bar]);
+      beams.push(...VexFlow.Beam.generateBeams(barNotes));
+      voice.draw(context, routineVexStaves[bar]);
+    }
+    beams.forEach((b) => b.setContext(context).draw());
+  } catch (err) {
+    console.error("Failed to render routine notation:", err);
+    elRoutineNotationOutput.textContent = "Notation failed to render. Playback still works.";
+  }
+}
+
+// Live hit marker for Routine playback (SPEC.md AC7) — same "presence +
+// position only" contract as the Groove practice view's drawLiveMarker,
+// against whichever bar/step of the ACTIVE item's groove is nearest in
+// time. Uses routineClickLog (recent click events, each carrying its own
+// itemIndex/groove-relative `bar`/`step` and the item's own tempo) to find
+// the nearest CLICK in time — same "nearest scheduled event wins" approach
+// as nearestExpectedStep for the Groove view — then places the marker at
+// that exact absolute grid position on the currently-rendered active-item
+// stave.
+//
+// Code-review fix: routineClickLog is a ROLLING buffer (ROUTINE_CLICK_LOG_LIMIT
+// entries) that still holds the PREVIOUS item's clicks for a short window
+// right after an item boundary. Searching the whole log for "nearest by
+// time" while always dividing by the CURRENT item's own stepsPerBar could
+// match a still-buffered old-item click whose groove had a different
+// stepsPerBar — a meaningless index right at the tempo seam this increment
+// flagged as risky. Filtering to the active item's own clicks first means
+// only genuinely-comparable entries are ever candidates.
+function handleRoutineHit(audioTime) {
+  if (routineClickLog.length === 0 || routineStaveNotes.length === 0) return;
+  const activeItem = currentRoutine.items[routineActiveItemIndex];
+  const activeGroove = activeItem ? grooveLibrary.find((e) => e.id === activeItem.grooveId)?.groove : null;
+  if (!activeGroove) return;
+  const stepsPerBar = grooveStepsPerBar(activeGroove);
+
+  let best = null;
+  let bestDelta = Infinity;
+  for (const entry of routineClickLog) {
+    if (entry.meta?.itemIndex !== routineActiveItemIndex) continue; // stale, pre-transition click
+    const delta = Math.abs(entry.absTime - audioTime);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = entry;
+    }
+  }
+  if (!best) return;
+  const position = best.bar * stepsPerBar + (best.step ?? 0);
+  const note = routineStaveNotes[position];
+  const svg = elRoutineNotationOutput.querySelector("svg");
+  if (!svg || !note) return;
+
+  // Replace any earlier marker at this same position (don't stack — see
+  // routineLiveMarkerEls's own header comment for why a plain array leaked).
+  const existing = routineLiveMarkerEls.get(position);
+  if (existing) existing.remove();
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", note.getAbsoluteX());
+  circle.setAttribute("cy", note.getYs()[0]);
+  circle.setAttribute("r", String(LIVE_MARKER_RADIUS));
+  circle.setAttribute("fill", "var(--accent)");
+  circle.setAttribute("fill-opacity", "0.55");
+  circle.setAttribute("stroke", "var(--bg)");
+  circle.setAttribute("stroke-width", "1");
+  svg.appendChild(circle);
+  routineLiveMarkerEls.set(position, circle);
+}
+
+// =============================================================================
 // Test / free-play area (SPEC.md section D)
 //
 // Metronome runs on a selectable subdivision (1/4, 1/8, 1/16); no
@@ -3454,20 +4684,28 @@ function switchMode(mode) {
   if (mode === currentMode) return;
   if (engine && engine.isRunning) stopTransport();
   if (testEngine && testEngine.isRunning) stopTestTransport();
+  if (routineEngine && routineEngine.isRunning) stopRoutineTransport();
 
   currentMode = mode;
   elTabGroove.classList.toggle("active", mode === "groove");
+  elTabRoutines.classList.toggle("active", mode === "routines");
   elTabTest.classList.toggle("active", mode === "test");
   elModePanelGroove.classList.toggle("active", mode === "groove");
+  elModePanelRoutines.classList.toggle("active", mode === "routines");
   elModePanelTest.classList.toggle("active", mode === "test");
 
   // The notation SVG is sized from its container's clientWidth at render
-  // time; re-render on switching TO Groove mode in case it was built while
-  // the panel was display:none (clientWidth would have been 0).
-  if (mode === "groove") renderNotation();
+  // time; re-render on switching INTO a mode in case it was built while the
+  // panel was display:none (clientWidth would have been 0) — matters more
+  // now every notation surface uses the panel's full actual width (SPEC.md
+  // increment 7, section C) rather than a fixed pixel size.
+  if (mode === "groove") { renderNotation(); renderEditor(); }
+  if (mode === "test") resetTestStaff();
+  if (mode === "routines") renderRoutineNotation();
 }
 
 elTabGroove.addEventListener("click", () => switchMode("groove"));
+elTabRoutines.addEventListener("click", () => switchMode("routines"));
 elTabTest.addEventListener("click", () => switchMode("test"));
 
 document.addEventListener("keydown", (e) => {
@@ -3477,9 +4715,21 @@ document.addEventListener("keydown", (e) => {
   e.preventDefault();
   if (currentMode === "groove") {
     toggleTransport();
+  } else if (currentMode === "routines") {
+    toggleRoutineTransport();
   } else {
     toggleTestTransport();
   }
+});
+
+// ---- Notation size control (SPEC.md increment 7, section C) ----
+elNotationSizeSelect.addEventListener("change", () => {
+  notationSize = elNotationSizeSelect.value;
+  dbSet("notationSize", notationSize).catch((err) => console.error("Failed to persist notation size:", err));
+  try { renderNotation(); } catch (err) { console.error("renderNotation() failed after size change:", err); }
+  try { renderEditor(); } catch (err) { console.error("renderEditor() failed after size change:", err); }
+  try { renderTestStaffPage(testStaffPage); } catch (err) { console.error("renderTestStaffPage() failed after size change:", err); }
+  try { renderRoutineNotation(); } catch (err) { console.error("renderRoutineNotation() failed after size change:", err); }
 });
 
 // =============================================================================
@@ -3491,21 +4741,49 @@ async function boot() {
   let staffLayoutCollapsed = false;
 
   try {
-    const [savedMap, savedInputId, savedBpm, savedStaffLayout, savedMappingCollapsed, savedStaffLayoutCollapsed] =
-      await Promise.all([
-        dbGet("noteMap"),
-        dbGet("selectedInputId"),
-        dbGet("bpm"),
-        dbGet("staffLayout"),
-        dbGet("mappingPanelCollapsed"),
-        dbGet("staffLayoutPanelCollapsed"),
-      ]);
+    const [
+      savedMap,
+      savedInputId,
+      savedBpm,
+      savedStaffLayout,
+      savedMappingCollapsed,
+      savedStaffLayoutCollapsed,
+      savedGrooveLibrary,
+      savedRoutineLibrary,
+      savedNotationSize,
+    ] = await Promise.all([
+      dbGet("noteMap"),
+      dbGet("selectedInputId"),
+      dbGet("bpm"),
+      dbGet("staffLayout"),
+      dbGet("mappingPanelCollapsed"),
+      dbGet("staffLayoutPanelCollapsed"),
+      dbGet("grooveLibrary"),
+      dbGet("routineLibrary"),
+      dbGet("notationSize"),
+    ]);
     if (savedMap) noteMap = savedMap;
     if (savedInputId) selectedInputId = savedInputId;
     if (savedBpm) currentBpm = savedBpm;
     // normaliseStaffLayout fills any missing/invalid voice with its shipped
     // default, so a stale/partial saved layout can't corrupt rendering.
     if (savedStaffLayout) staffLayout = normaliseStaffLayout(savedStaffLayout);
+
+    // Groove/routine libraries (SPEC.md increment 7) — deserialize through
+    // groove.js/routine.js's own validation so a corrupt/stale saved entry
+    // is dropped/normalised rather than crashing boot(). Malformed top-level
+    // entries (missing id/name) are dropped too.
+    if (Array.isArray(savedGrooveLibrary)) {
+      grooveLibrary = savedGrooveLibrary
+        .filter((e) => e && typeof e.id === "string" && typeof e.name === "string")
+        .map((e) => ({ id: e.id, name: e.name, groove: grooveDeserialize(e.groove), updatedAt: e.updatedAt || Date.now() }));
+    }
+    if (Array.isArray(savedRoutineLibrary)) {
+      routineLibrary = savedRoutineLibrary
+        .filter((e) => e && typeof e.id === "string" && typeof e.name === "string")
+        .map((e) => ({ id: e.id, ...routineDeserialize(e), updatedAt: e.updatedAt || Date.now() }));
+    }
+    if (savedNotationSize && NOTATION_SCALE[savedNotationSize]) notationSize = savedNotationSize;
 
     // Collapsible panels (SPEC.md section D): if the user has an explicit
     // remembered open/closed state, use it. Otherwise default to COLLAPSED
@@ -3523,11 +4801,18 @@ async function boot() {
   setPanelCollapsed(elMappingPanel, mappingCollapsed);
   setPanelCollapsed(elStaffLayoutPanel, staffLayoutCollapsed);
 
+  elNotationSizeSelect.value = notationSize;
+
   renderMappingPanel();
   renderStaffLayoutPanel();
   populatePresetSelect();
   populateBarsSelect();
   syncEditorControls();
+  renderLibraryPanel();
+  renderRoutineLibraryPanel();
+  renderRoutineAddGrooveSelect();
+  renderRoutineItemsPanel();
+  elRoutineStatus.textContent = "Stopped";
   // renderNotation() already catches its own errors internally (see its
   // definition), but this try/catch is a second safety net: it guarantees
   // that ANY unexpected failure here still can't stop initMidi() below from
@@ -3558,6 +4843,11 @@ async function boot() {
     resetTestStaff();
   } catch (err) {
     console.error("renderTestStaffPage() failed unexpectedly during boot:", err);
+  }
+  try {
+    renderRoutineNotation();
+  } catch (err) {
+    console.error("renderRoutineNotation() failed unexpectedly during boot:", err);
   }
 
   await initMidi();

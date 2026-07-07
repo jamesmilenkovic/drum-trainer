@@ -191,11 +191,27 @@ export function splitPosition(position, stepsPerBar) {
 // barGeometries: array, one entry per bar, each { noteStartX, noteEndX }
 // (bar 0 first). staffGeometry: { topLineY, lineSpacing } (shared across
 // bars — they're all drawn on the same horizontal staff lines).
+//
+// Row-wrapping (SPEC.md increment 7, section C: "long charts wrap into
+// full-width systems/lines, not a horizontal squeeze"): once a chart lays
+// its bars across MULTIPLE rows, each row sits at its own y on the canvas,
+// even though every row uses the identical line-spacing/staff shape. Rather
+// than force every call site to pass a full per-bar staffGeometry object, a
+// barGeometry entry MAY carry its own `rowTopLineY` (that bar's row's own
+// stave.getYForLine(0)) — geometryForBar() below picks that up if present,
+// falling back to the single shared `staffGeometry.topLineY` otherwise (the
+// pre-increment-7 single-row shape, unchanged for every existing caller/
+// test that only ever draws one row).
+function geometryForBar(barGeometry, staffGeometry) {
+  const topLineY = barGeometry && barGeometry.rowTopLineY !== undefined ? barGeometry.rowTopLineY : staffGeometry.topLineY;
+  return { topLineY, lineSpacing: staffGeometry.lineSpacing };
+}
+
 export function drawXY(layout, voice, position, { stepsPerBar, barGeometries, staffGeometry }) {
   const { bar, stepIndexInBar } = splitPosition(position, stepsPerBar);
   const barGeometry = barGeometries[bar];
   if (!barGeometry) return null;
-  const y = voiceRowY(layout, voice, staffGeometry);
+  const y = voiceRowY(layout, voice, geometryForBar(barGeometry, staffGeometry));
   if (y === null) return null;
   const x = stepColumnX(barGeometry, stepIndexInBar, stepsPerBar);
   return { x, y, bar, stepIndexInBar };
@@ -216,10 +232,31 @@ export function drawXY(layout, voice, position, { stepsPerBar, barGeometries, st
 // toggleNote(). Returns null only if `layout` has no resolvable voices at
 // all (defensive; shouldn't happen with a valid layout).
 export function hitTest(layout, { x, y }, { stepsPerBar, barGeometries, staffGeometry }) {
-  // ---- Nearest bar + column by x ----
+  // ---- Nearest ROW by y first (SPEC.md increment 7 row-wrapping) ----
+  // Once a chart wraps across multiple lines, bars on DIFFERENT rows can
+  // share the exact same x-range (each row starts its columns at the same
+  // left margin) — matching bars by x alone (the pre-increment-7 approach)
+  // would then always resolve to the FIRST row regardless of which line the
+  // click landed on. Rows are far apart vertically (each its own staff), so
+  // finding the row nearest to y first, then matching by x only among that
+  // row's own bars, reliably picks the right line.
+  let bestRowDist = Infinity;
+  let rowY = staffGeometry.topLineY;
+  for (const bg of barGeometries) {
+    const candidateRowY = bg && bg.rowTopLineY !== undefined ? bg.rowTopLineY : staffGeometry.topLineY;
+    const dist = Math.abs(y - candidateRowY);
+    if (dist < bestRowDist) {
+      bestRowDist = dist;
+      rowY = candidateRowY;
+    }
+  }
+
+  // ---- Nearest bar + column by x, among bars on that same row ----
   let bestBar = 0;
   let bestBarDist = Infinity;
   barGeometries.forEach((bg, i) => {
+    const bgRowY = bg && bg.rowTopLineY !== undefined ? bg.rowTopLineY : staffGeometry.topLineY;
+    if (bgRowY !== rowY) return; // a different row — not an x-candidate
     const mid = (bg.noteStartX + bg.noteEndX) / 2;
     const halfWidth = (bg.noteEndX - bg.noteStartX) / 2;
     const dist = Math.max(0, Math.abs(x - mid) - halfWidth); // 0 if x is inside this bar's span
@@ -235,10 +272,14 @@ export function hitTest(layout, { x, y }, { stepsPerBar, barGeometries, staffGeo
   const stepIndexInBar = Math.min(stepsPerBar - 1, Math.max(0, Math.round(rawStep - 0.5)));
 
   // ---- Nearest voice by y ----
+  // Uses the CHOSEN bar's own row geometry (geometryForBar) so a
+  // row-wrapped, multi-line chart hit-tests against the row the click
+  // actually landed in, not always row 0's y — see drawXY's header comment.
+  const rowGeometry = geometryForBar(barGeometry, staffGeometry);
   let bestVoice = null;
   let bestVoiceDist = Infinity;
   for (const voice of Object.keys(layout)) {
-    const rowY = voiceRowY(layout, voice, staffGeometry);
+    const rowY = voiceRowY(layout, voice, rowGeometry);
     if (rowY === null) continue;
     const dist = Math.abs(y - rowY);
     if (dist < bestVoiceDist) {
